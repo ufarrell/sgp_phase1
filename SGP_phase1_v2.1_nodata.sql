@@ -1,0 +1,7338 @@
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 9.5.2
+-- Dumped by pg_dump version 12.2
+
+-- Started on 2020-08-15 17:37:45 IST
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+DROP DATABASE "SGP_phase1_v2.1";
+--
+-- TOC entry 3183 (class 1262 OID 268279)
+-- Name: SGP_phase1_v2.1; Type: DATABASE; Schema: -; Owner: -
+--
+
+CREATE DATABASE "SGP_phase1_v2.1" WITH TEMPLATE = template0 ENCODING = 'UTF8' LC_COLLATE = 'en_US.UTF-8' LC_CTYPE = 'en_US.UTF-8';
+
+
+\connect "SGP_phase1_v2.1"
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- TOC entry 3 (class 3079 OID 273760)
+-- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
+
+
+--
+-- TOC entry 3185 (class 0 OID 0)
+-- Dependencies: 3
+-- Name: EXTENSION pgcrypto; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
+
+
+--
+-- TOC entry 2 (class 3079 OID 273797)
+-- Name: tablefunc; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS tablefunc WITH SCHEMA public;
+
+
+--
+-- TOC entry 3186 (class 0 OID 0)
+-- Dependencies: 2
+-- Name: EXTENSION tablefunc; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION tablefunc IS 'functions that manipulate whole tables, including crosstab';
+
+
+--
+-- TOC entry 709 (class 1247 OID 273819)
+-- Name: biozone_rank; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.biozone_rank AS ENUM (
+    'superzone',
+    'zone',
+    'subzone'
+);
+
+
+--
+-- TOC entry 343 (class 1255 OID 273825)
+-- Name: refreshallmaterializedviews(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.refreshallmaterializedviews(schema_arg text DEFAULT 'public'::text) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+ DECLARE
+  r RECORD;
+ BEGIN
+  RAISE NOTICE 'Refreshing materialized view in schema %', schema_arg;
+  FOR r IN SELECT matviewname FROM pg_matviews WHERE schemaname = schema_arg
+  LOOP
+   RAISE NOTICE 'Refreshing %.%', schema_arg, r.matviewname;
+   EXECUTE 'REFRESH MATERIALIZED VIEW ' || schema_arg || '.' || r.matviewname;
+  END LOOP;
+
+  RETURN 1;
+ END
+$$;
+
+
+--
+-- TOC entry 344 (class 1255 OID 273826)
+-- Name: refreshallmaterializedviewsconcurrently(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.refreshallmaterializedviewsconcurrently(schema_arg text DEFAULT 'public'::text) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE
+        r RECORD;
+    BEGIN
+        RAISE NOTICE 'Refreshing materialized view in schema %', schema_arg;
+        FOR r IN SELECT matviewname FROM pg_matviews WHERE schemaname = schema_arg
+        LOOP
+            RAISE NOTICE 'Refreshing %.%', schema_arg, r.matviewname;
+            EXECUTE 'REFRESH MATERIALIZED VIEW CONCURRENTLY ' || schema_arg || '.' || r.matviewname;
+        END LOOP;
+
+        RETURN 1;
+    END
+$$;
+
+
+--
+-- TOC entry 345 (class 1255 OID 273827)
+-- Name: update_modified_column(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_modified_column() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    NEW.timestamp_modified = now();
+    RETURN NEW;
+END;
+$$;
+
+
+--
+-- TOC entry 186 (class 1259 OID 273828)
+-- Name: affiliation; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.affiliation (
+    affiliation_id integer NOT NULL,
+    person_id integer NOT NULL,
+    institution_id integer,
+    email character varying(255),
+    address character varying(255),
+    person_url character varying(255),
+    phone character varying(50),
+    start_date date,
+    end_date date,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    is_current boolean
+);
+
+
+--
+-- TOC entry 3187 (class 0 OID 0)
+-- Dependencies: 186
+-- Name: TABLE affiliation; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.affiliation IS 'Affiliations of people to institutions. A person may be associated with more than one institution.';
+
+
+--
+-- TOC entry 3188 (class 0 OID 0)
+-- Dependencies: 186
+-- Name: COLUMN affiliation.affiliation_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.affiliation.affiliation_id IS 'PK. Unique ID for each affiliation. Generated by database.';
+
+
+--
+-- TOC entry 3189 (class 0 OID 0)
+-- Dependencies: 186
+-- Name: COLUMN affiliation.person_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.affiliation.person_id IS 'FK. ID for a person. Links to person table.';
+
+
+--
+-- TOC entry 3190 (class 0 OID 0)
+-- Dependencies: 186
+-- Name: COLUMN affiliation.institution_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.affiliation.institution_id IS 'FK. ID for an institution. Links to institution table';
+
+
+--
+-- TOC entry 3191 (class 0 OID 0)
+-- Dependencies: 186
+-- Name: COLUMN affiliation.email; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.affiliation.email IS 'Email address';
+
+
+--
+-- TOC entry 3192 (class 0 OID 0)
+-- Dependencies: 186
+-- Name: COLUMN affiliation.address; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.affiliation.address IS 'Street address of the person';
+
+
+--
+-- TOC entry 3193 (class 0 OID 0)
+-- Dependencies: 186
+-- Name: COLUMN affiliation.person_url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.affiliation.person_url IS 'Link to webpage of the person';
+
+
+--
+-- TOC entry 3194 (class 0 OID 0)
+-- Dependencies: 186
+-- Name: COLUMN affiliation.phone; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.affiliation.phone IS 'Phone number of the person';
+
+
+--
+-- TOC entry 3195 (class 0 OID 0)
+-- Dependencies: 186
+-- Name: COLUMN affiliation.start_date; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.affiliation.start_date IS 'Date the person became affiliated with the institution';
+
+
+--
+-- TOC entry 3196 (class 0 OID 0)
+-- Dependencies: 186
+-- Name: COLUMN affiliation.end_date; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.affiliation.end_date IS 'Date the person left the institution';
+
+
+--
+-- TOC entry 3197 (class 0 OID 0)
+-- Dependencies: 186
+-- Name: COLUMN affiliation.is_current; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.affiliation.is_current IS 'Whether affiliation is current. Person can have multiple affiliations over time. Note: collaborators view is populated where is_current is true.';
+
+
+--
+-- TOC entry 187 (class 1259 OID 273836)
+-- Name: affiliation_affiliation_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.affiliation_affiliation_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3198 (class 0 OID 0)
+-- Dependencies: 187
+-- Name: affiliation_affiliation_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.affiliation_affiliation_id_seq OWNED BY public.affiliation.affiliation_id;
+
+
+--
+-- TOC entry 212 (class 1259 OID 274069)
+-- Name: alternate_num; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.alternate_num (
+    sample_id integer NOT NULL,
+    alternate_num character varying(50) NOT NULL,
+    reference_id integer,
+    notes character varying(4000),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3199 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: TABLE alternate_num; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.alternate_num IS 'Alternate original sample numbers. The same samples are frequently numbered/named in different ways in different publications and institutional collections. A sample may be associated with more than one alternate number.';
+
+
+--
+-- TOC entry 3200 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN alternate_num.sample_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.alternate_num.sample_id IS 'PK/FK. ID for a sample, links to the sample table. Part of a composite primary key in this table, along with alternate_num.';
+
+
+--
+-- TOC entry 3201 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN alternate_num.alternate_num; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.alternate_num.alternate_num IS 'PK/FK. Alternate sample number/name. Part of a composite primary key in this table along with sample_id. Note that alternate_num is not always unique';
+
+
+--
+-- TOC entry 3202 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN alternate_num.reference_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.alternate_num.reference_id IS 'FK. ID for the reference work, for cases where the alternate_num appears in a publication. Links to the reference_work table.';
+
+
+--
+-- TOC entry 3203 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN alternate_num.notes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.alternate_num.notes IS 'Any notes about the alternate_num. Include information about the source of the alternate number, especially if it is not published.';
+
+
+--
+-- TOC entry 188 (class 1259 OID 273838)
+-- Name: analysis; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analysis (
+    analysis_id integer NOT NULL,
+    prep_id integer,
+    exp_method_id integer,
+    ana_method_id integer,
+    batch_id integer NOT NULL,
+    analysis_notes character varying(4000),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    lab_method_code character varying(100),
+    run_by integer,
+    provided_by integer
+);
+
+
+--
+-- TOC entry 3204 (class 0 OID 0)
+-- Dependencies: 188
+-- Name: TABLE analysis; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.analysis IS 'Analysis details for a batch i.e. preparation, experimental and analytical methods, who ran the analysis and/or provided the data';
+
+
+--
+-- TOC entry 3205 (class 0 OID 0)
+-- Dependencies: 188
+-- Name: COLUMN analysis.analysis_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analysis.analysis_id IS 'PK. Unique ID for each analysis record for each batch. Generated by database.';
+
+
+--
+-- TOC entry 3206 (class 0 OID 0)
+-- Dependencies: 188
+-- Name: COLUMN analysis.prep_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analysis.prep_id IS 'FK. ID for each preparation method e.g. Tungsten carbide shatterbox. Links to the dic_prep_method table.';
+
+
+--
+-- TOC entry 3207 (class 0 OID 0)
+-- Dependencies: 188
+-- Name: COLUMN analysis.exp_method_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analysis.exp_method_id IS 'FK. ID for each experimental method used e.g. Treated with HCl. Links to the dic_exp_method table.';
+
+
+--
+-- TOC entry 3208 (class 0 OID 0)
+-- Dependencies: 188
+-- Name: COLUMN analysis.ana_method_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analysis.ana_method_id IS 'FK. ID for each analytical method used e.g. ICP:MS. Links to the dic_ana_method table.';
+
+
+--
+-- TOC entry 3209 (class 0 OID 0)
+-- Dependencies: 188
+-- Name: COLUMN analysis.batch_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analysis.batch_id IS 'FK. Identifier for the batch. Links to the batch table';
+
+
+--
+-- TOC entry 3210 (class 0 OID 0)
+-- Dependencies: 188
+-- Name: COLUMN analysis.analysis_notes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analysis.analysis_notes IS 'Detailed description of the analysis. Often cut-and-paste from the methods section for published data.';
+
+
+--
+-- TOC entry 3211 (class 0 OID 0)
+-- Dependencies: 188
+-- Name: COLUMN analysis.lab_method_code; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analysis.lab_method_code IS 'Laboratory-specific code for the analysis, usually from a commercial lab e.g. MA200 from Bureau Veritas';
+
+
+--
+-- TOC entry 3212 (class 0 OID 0)
+-- Dependencies: 188
+-- Name: COLUMN analysis.run_by; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analysis.run_by IS 'FK. The person who ran the experiment (note: sample preparation may have been done by someone else). Links to person table.';
+
+
+--
+-- TOC entry 3213 (class 0 OID 0)
+-- Dependencies: 188
+-- Name: COLUMN analysis.provided_by; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analysis.provided_by IS 'The person who provided the data - they may or may not have run the analysis themselves. Primarily used to track the provenance of unpublished results. Links to person table.';
+
+
+--
+-- TOC entry 213 (class 1259 OID 274081)
+-- Name: analysis_analysis_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.analysis_analysis_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3214 (class 0 OID 0)
+-- Dependencies: 213
+-- Name: analysis_analysis_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.analysis_analysis_id_seq OWNED BY public.analysis.analysis_id;
+
+
+--
+-- TOC entry 189 (class 1259 OID 273846)
+-- Name: analyte_determination; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analyte_determination (
+    analyte_det_id integer NOT NULL,
+    determination_unit character varying(10),
+    batch_id integer NOT NULL,
+    limit_id integer,
+    abundance numeric(17,9),
+    result_notes character varying(4000),
+    sample_id integer NOT NULL,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    is_below_detection boolean DEFAULT false,
+    uuid uuid DEFAULT public.gen_random_uuid(),
+    is_public boolean DEFAULT false,
+    is_average boolean DEFAULT false,
+    reference_id integer,
+    reference_notes character varying(4000),
+    is_above_detection boolean DEFAULT false,
+    two_sigma numeric(5,2),
+    n integer DEFAULT 1,
+    two_se numeric(5,2),
+    std_dev numeric(5,2),
+    one_se numeric(5,2),
+    cv numeric,
+    rho numeric,
+    CONSTRAINT abundance_negative CHECK (((abundance >= (0)::numeric) OR ((determination_unit)::text = 'permil'::text))),
+    CONSTRAINT abundance_null CHECK (((abundance IS NOT NULL) OR (is_above_detection IS NOT NULL) OR (is_below_detection IS NOT NULL)))
+);
+
+
+--
+-- TOC entry 3215 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: TABLE analyte_determination; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.analyte_determination IS 'Raw results of geochemical analyses. Reported in the original units.';
+
+
+--
+-- TOC entry 3216 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: COLUMN analyte_determination.analyte_det_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination.analyte_det_id IS 'PK. Unique ID for each analytical result. Generated by database.';
+
+
+--
+-- TOC entry 3217 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: COLUMN analyte_determination.determination_unit; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination.determination_unit IS 'The unit of the measured result e.g. wtpct, ppm, permil.';
+
+
+--
+-- TOC entry 3218 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: COLUMN analyte_determination.batch_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination.batch_id IS 'FK. ID for a batch. Links to the batch_sample table.';
+
+
+--
+-- TOC entry 3219 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: COLUMN analyte_determination.limit_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination.limit_id IS 'FK. ID for analyte_code and determination upper and lower limits. Links to the analyte_determination_limits table.';
+
+
+--
+-- TOC entry 3220 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: COLUMN analyte_determination.abundance; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination.abundance IS 'Measured result';
+
+
+--
+-- TOC entry 3221 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: COLUMN analyte_determination.result_notes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination.result_notes IS 'Notes about the result';
+
+
+--
+-- TOC entry 3222 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: COLUMN analyte_determination.sample_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination.sample_id IS 'FK. ID of the sample. Links to the batch_sample table.';
+
+
+--
+-- TOC entry 3223 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: COLUMN analyte_determination.is_below_detection; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination.is_below_detection IS 'Whether the result was below the detection limit (see analyte_determination_limit.lower_detection_limit). Note constraint: abundance can only be empty when the result was below or above detection.';
+
+
+--
+-- TOC entry 3224 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: COLUMN analyte_determination.uuid; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination.uuid IS 'Randomly generated unique identifier';
+
+
+--
+-- TOC entry 3225 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: COLUMN analyte_determination.is_public; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination.is_public IS 'Whether or not the result is public. False by default.';
+
+
+--
+-- TOC entry 3226 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: COLUMN analyte_determination.is_average; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination.is_average IS 'Whether or not the result is an average of more than one measurement. False by default.';
+
+
+--
+-- TOC entry 3227 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: COLUMN analyte_determination.reference_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination.reference_id IS 'FK. ID for the reference work where the result was first published. Links to the reference_work table.';
+
+
+--
+-- TOC entry 3228 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: COLUMN analyte_determination.reference_notes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination.reference_notes IS 'Notes about the reference work that pertain to this particular result.';
+
+
+--
+-- TOC entry 3229 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: COLUMN analyte_determination.is_above_detection; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination.is_above_detection IS 'Whether the result was above the detection limit (see analyte_determination_limit.upper_detection_limit). Note constraint: abundance can only be empty when the result was below or above detection.';
+
+
+--
+-- TOC entry 3230 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: COLUMN analyte_determination.two_sigma; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination.two_sigma IS 'Two standard deviations from the mean';
+
+
+--
+-- TOC entry 3231 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: COLUMN analyte_determination.n; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination.n IS 'Number of data points included in average, where reported data is an average.';
+
+
+--
+-- TOC entry 3232 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: COLUMN analyte_determination.two_se; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination.two_se IS 'Two standard error';
+
+
+--
+-- TOC entry 3233 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: COLUMN analyte_determination.std_dev; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination.std_dev IS 'Standard deviation';
+
+
+--
+-- TOC entry 3234 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: COLUMN analyte_determination.one_se; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination.one_se IS 'One standard error';
+
+
+--
+-- TOC entry 3235 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: COLUMN analyte_determination.cv; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination.cv IS 'Error correlation';
+
+
+--
+-- TOC entry 3236 (class 0 OID 0)
+-- Dependencies: 189
+-- Name: COLUMN analyte_determination.rho; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination.rho IS 'Spearman''s rank correlation coefficient/Pearson correlation coefficient';
+
+
+--
+-- TOC entry 214 (class 1259 OID 274083)
+-- Name: analyte_determination_analyte_det_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.analyte_determination_analyte_det_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3237 (class 0 OID 0)
+-- Dependencies: 214
+-- Name: analyte_determination_analyte_det_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.analyte_determination_analyte_det_id_seq OWNED BY public.analyte_determination.analyte_det_id;
+
+
+--
+-- TOC entry 190 (class 1259 OID 273862)
+-- Name: analyte_determination_limits; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analyte_determination_limits (
+    limit_id integer NOT NULL,
+    analysis_id integer NOT NULL,
+    detection_lower_limit numeric(15,8),
+    detection_upper_limit numeric(15,8),
+    detection_unit character varying(10),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    analyte_code character varying(200) NOT NULL,
+    reference_standard character varying(250)
+);
+
+
+--
+-- TOC entry 3238 (class 0 OID 0)
+-- Dependencies: 190
+-- Name: TABLE analyte_determination_limits; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.analyte_determination_limits IS 'Detection limits (lower and upper) and analytes for each analysis. Units are the same as reported analytical result.';
+
+
+--
+-- TOC entry 3239 (class 0 OID 0)
+-- Dependencies: 190
+-- Name: COLUMN analyte_determination_limits.limit_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination_limits.limit_id IS 'PK. Unique ID for each record describing the analyte determination limits for a each analyte in a batch. Generated by the database';
+
+
+--
+-- TOC entry 3240 (class 0 OID 0)
+-- Dependencies: 190
+-- Name: COLUMN analyte_determination_limits.analysis_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination_limits.analysis_id IS 'FK. ID for each analysis record. Links to analysis table.';
+
+
+--
+-- TOC entry 3241 (class 0 OID 0)
+-- Dependencies: 190
+-- Name: COLUMN analyte_determination_limits.detection_lower_limit; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination_limits.detection_lower_limit IS 'From BGS: This column contains for each analyte the LOWEST level that can be reliably detected using the specified combination of laboratory, analysis method, sample preparation technique.';
+
+
+--
+-- TOC entry 3242 (class 0 OID 0)
+-- Dependencies: 190
+-- Name: COLUMN analyte_determination_limits.detection_upper_limit; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination_limits.detection_upper_limit IS 'From BGS: This column contains for each analyte the MAXIMUM level that can be reliably detected using the specified combination of laboratory, analysis method, sample preparation technique.';
+
+
+--
+-- TOC entry 3243 (class 0 OID 0)
+-- Dependencies: 190
+-- Name: COLUMN analyte_determination_limits.detection_unit; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.analyte_determination_limits.detection_unit IS 'The unit of measurement the upper and lower limits are reported in, e.g. wtpct, ppm, permil';
+
+
+--
+-- TOC entry 215 (class 1259 OID 274085)
+-- Name: analyte_determination_limits_limit_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.analyte_determination_limits_limit_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3244 (class 0 OID 0)
+-- Dependencies: 215
+-- Name: analyte_determination_limits_limit_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.analyte_determination_limits_limit_id_seq OWNED BY public.analyte_determination_limits.limit_id;
+
+
+--
+-- TOC entry 216 (class 1259 OID 274087)
+-- Name: author; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.author (
+    author_id integer NOT NULL,
+    person_id integer NOT NULL,
+    reference_id integer NOT NULL,
+    author_position integer,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3245 (class 0 OID 0)
+-- Dependencies: 216
+-- Name: TABLE author; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.author IS 'Links reference_work to person (authors)';
+
+
+--
+-- TOC entry 3246 (class 0 OID 0)
+-- Dependencies: 216
+-- Name: COLUMN author.author_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.author.author_id IS 'PK. Unique ID for each author. Generated by the database';
+
+
+--
+-- TOC entry 3247 (class 0 OID 0)
+-- Dependencies: 216
+-- Name: COLUMN author.person_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.author.person_id IS 'FK. ID for each author. Links to the person table.';
+
+
+--
+-- TOC entry 3248 (class 0 OID 0)
+-- Dependencies: 216
+-- Name: COLUMN author.reference_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.author.reference_id IS 'FK. ID of the reference_work. Links to the reference_work table.';
+
+
+--
+-- TOC entry 3249 (class 0 OID 0)
+-- Dependencies: 216
+-- Name: COLUMN author.author_position; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.author.author_position IS 'The position of the author in the author list';
+
+
+--
+-- TOC entry 217 (class 1259 OID 274092)
+-- Name: author_author_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.author_author_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3250 (class 0 OID 0)
+-- Dependencies: 217
+-- Name: author_author_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.author_author_id_seq OWNED BY public.author.author_id;
+
+
+--
+-- TOC entry 195 (class 1259 OID 273916)
+-- Name: basin; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.basin (
+    basin_id integer NOT NULL,
+    basin_type_id integer,
+    basin_name character varying(100),
+    basin_notes character varying(4000),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3251 (class 0 OID 0)
+-- Dependencies: 195
+-- Name: TABLE basin; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.basin IS 'Information about the basin, prefereably including a basin name (e.g. Taconic Foreland Basin), and a basin type (from dic_basin).';
+
+
+--
+-- TOC entry 3252 (class 0 OID 0)
+-- Dependencies: 195
+-- Name: COLUMN basin.basin_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basin.basin_id IS 'PK. Unique ID for a basin. Generated by the database.';
+
+
+--
+-- TOC entry 3253 (class 0 OID 0)
+-- Dependencies: 195
+-- Name: COLUMN basin.basin_type_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basin.basin_type_id IS 'FK. ID for the basin type. Links to dic_basin_type table.';
+
+
+--
+-- TOC entry 3254 (class 0 OID 0)
+-- Dependencies: 195
+-- Name: COLUMN basin.basin_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basin.basin_name IS 'Name for the basin eg. McArthur Basin';
+
+
+--
+-- TOC entry 3255 (class 0 OID 0)
+-- Dependencies: 195
+-- Name: COLUMN basin.basin_notes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basin.basin_notes IS 'Notes about the basin';
+
+
+--
+-- TOC entry 223 (class 1259 OID 274140)
+-- Name: basin_basin_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.basin_basin_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3256 (class 0 OID 0)
+-- Dependencies: 223
+-- Name: basin_basin_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.basin_basin_id_seq OWNED BY public.basin.basin_id;
+
+
+--
+-- TOC entry 218 (class 1259 OID 274094)
+-- Name: batch; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.batch (
+    batch_id integer NOT NULL,
+    lab_id integer,
+    lab_batch_id character varying(50),
+    end_date date,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    batch_notes character varying(4000) NOT NULL,
+    start_date date
+);
+
+
+--
+-- TOC entry 3257 (class 0 OID 0)
+-- Dependencies: 218
+-- Name: TABLE batch; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.batch IS 'A batch of samples analysed at the same laboratory at roughly the same time. One batch of samples may go through multiple analyses, and samples may be associated with mutiple batches (see batch_sample table)';
+
+
+--
+-- TOC entry 3258 (class 0 OID 0)
+-- Dependencies: 218
+-- Name: COLUMN batch.batch_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.batch.batch_id IS 'PK. Unique ID for a batch. Generated by the database.';
+
+
+--
+-- TOC entry 3259 (class 0 OID 0)
+-- Dependencies: 218
+-- Name: COLUMN batch.lab_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.batch.lab_id IS 'FK. ID for the laboratory where the analysis was undertaken. Links to the institution table.';
+
+
+--
+-- TOC entry 3260 (class 0 OID 0)
+-- Dependencies: 218
+-- Name: COLUMN batch.lab_batch_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.batch.lab_batch_id IS 'The batch number issued by an analytical laboratory to identify the batch of samples, this will almost certainly be unique for each laboratory but may not be globally unique.';
+
+
+--
+-- TOC entry 3261 (class 0 OID 0)
+-- Dependencies: 218
+-- Name: COLUMN batch.end_date; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.batch.end_date IS 'Date of registration of the batch.';
+
+
+--
+-- TOC entry 3262 (class 0 OID 0)
+-- Dependencies: 218
+-- Name: COLUMN batch.batch_notes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.batch.batch_notes IS 'Brief description of the batch';
+
+
+--
+-- TOC entry 224 (class 1259 OID 274152)
+-- Name: batch_batch_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.batch_batch_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3263 (class 0 OID 0)
+-- Dependencies: 224
+-- Name: batch_batch_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.batch_batch_id_seq OWNED BY public.batch.batch_id;
+
+
+--
+-- TOC entry 225 (class 1259 OID 274154)
+-- Name: batch_sample; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.batch_sample (
+    batch_id integer NOT NULL,
+    sample_id integer NOT NULL,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3264 (class 0 OID 0)
+-- Dependencies: 225
+-- Name: TABLE batch_sample; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.batch_sample IS 'Linking table to record which samples were batched together';
+
+
+--
+-- TOC entry 3265 (class 0 OID 0)
+-- Dependencies: 225
+-- Name: COLUMN batch_sample.batch_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.batch_sample.batch_id IS 'PK/FK. ID for a batch. Links to the batch table. Part of composite primary key.';
+
+
+--
+-- TOC entry 3266 (class 0 OID 0)
+-- Dependencies: 225
+-- Name: COLUMN batch_sample.sample_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.batch_sample.sample_id IS 'PK/FK. ID for the sample. Links to the sample table. Part of composite primary key.';
+
+
+--
+-- TOC entry 226 (class 1259 OID 274164)
+-- Name: biostrat; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.biostrat (
+    biostrat_id integer NOT NULL,
+    verbatim_biostrat character varying(250),
+    biostrat_notes character varying(4000),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    dic_biostrat_id integer
+);
+
+
+--
+-- TOC entry 3267 (class 0 OID 0)
+-- Dependencies: 226
+-- Name: TABLE biostrat; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.biostrat IS 'Biostratigraphical details';
+
+
+--
+-- TOC entry 3268 (class 0 OID 0)
+-- Dependencies: 226
+-- Name: COLUMN biostrat.biostrat_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.biostrat.biostrat_id IS 'PK. Unique ID for a biostratigraphic designation. Generated by the database.';
+
+
+--
+-- TOC entry 3269 (class 0 OID 0)
+-- Dependencies: 226
+-- Name: COLUMN biostrat.verbatim_biostrat; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.biostrat.verbatim_biostrat IS 'Verbatim biostratigraphy, provided by the author or from published work. May include abbreviations, or names which are not formal biozones, which nevertheless provide useful information';
+
+
+--
+-- TOC entry 227 (class 1259 OID 274172)
+-- Name: biostrat_biostrat_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.biostrat_biostrat_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3270 (class 0 OID 0)
+-- Dependencies: 227
+-- Name: biostrat_biostrat_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.biostrat_biostrat_id_seq OWNED BY public.biostrat.biostrat_id;
+
+
+--
+-- TOC entry 196 (class 1259 OID 273924)
+-- Name: collecting_event; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.collecting_event (
+    coll_event_id integer NOT NULL,
+    site_id integer NOT NULL,
+    start_date character varying(22),
+    end_date character varying(22),
+    coll_event_notes character varying(4000),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    verbatim_date character varying(255)
+);
+
+
+--
+-- TOC entry 3271 (class 0 OID 0)
+-- Dependencies: 196
+-- Name: TABLE collecting_event; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.collecting_event IS 'Details of sample collection from a particular site, in particular the date of collection. A site can be revisted multiple times.';
+
+
+--
+-- TOC entry 3272 (class 0 OID 0)
+-- Dependencies: 196
+-- Name: COLUMN collecting_event.coll_event_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.collecting_event.coll_event_id IS 'PK. Unique ID for a collecting event. Generated by the database';
+
+
+--
+-- TOC entry 3273 (class 0 OID 0)
+-- Dependencies: 196
+-- Name: COLUMN collecting_event.site_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.collecting_event.site_id IS 'FK. ID for a site. Links to the site table';
+
+
+--
+-- TOC entry 3274 (class 0 OID 0)
+-- Dependencies: 196
+-- Name: COLUMN collecting_event.start_date; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.collecting_event.start_date IS 'Start of the collection event.';
+
+
+--
+-- TOC entry 3275 (class 0 OID 0)
+-- Dependencies: 196
+-- Name: COLUMN collecting_event.end_date; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.collecting_event.end_date IS 'End of the collection event';
+
+
+--
+-- TOC entry 3276 (class 0 OID 0)
+-- Dependencies: 196
+-- Name: COLUMN collecting_event.coll_event_notes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.collecting_event.coll_event_notes IS 'Notes about the event.';
+
+
+--
+-- TOC entry 232 (class 1259 OID 274203)
+-- Name: collecting_event_coll_event_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.collecting_event_coll_event_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3277 (class 0 OID 0)
+-- Dependencies: 232
+-- Name: collecting_event_coll_event_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.collecting_event_coll_event_id_seq OWNED BY public.collecting_event.coll_event_id;
+
+
+--
+-- TOC entry 233 (class 1259 OID 274205)
+-- Name: collector; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.collector (
+    collector_id integer NOT NULL,
+    coll_event_id integer NOT NULL,
+    person_id integer NOT NULL,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3278 (class 0 OID 0)
+-- Dependencies: 233
+-- Name: TABLE collector; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.collector IS 'Linking table recording the people who were involved in the collecting event';
+
+
+--
+-- TOC entry 3279 (class 0 OID 0)
+-- Dependencies: 233
+-- Name: COLUMN collector.collector_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.collector.collector_id IS 'PK. Unique ID. Generated by the database';
+
+
+--
+-- TOC entry 3280 (class 0 OID 0)
+-- Dependencies: 233
+-- Name: COLUMN collector.coll_event_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.collector.coll_event_id IS 'FK. ID for the collecting event. Links to the collecting_event table.';
+
+
+--
+-- TOC entry 3281 (class 0 OID 0)
+-- Dependencies: 233
+-- Name: COLUMN collector.person_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.collector.person_id IS 'FK. ID for the collector. Links to the person table.';
+
+
+--
+-- TOC entry 234 (class 1259 OID 274210)
+-- Name: collector_collector_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.collector_collector_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3282 (class 0 OID 0)
+-- Dependencies: 234
+-- Name: collector_collector_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.collector_collector_id_seq OWNED BY public.collector.collector_id;
+
+
+--
+-- TOC entry 199 (class 1259 OID 273945)
+-- Name: dic_color; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dic_color (
+    color_id integer NOT NULL,
+    color_name character varying(50) NOT NULL,
+    color_qualifier character varying(50),
+    color_shade character varying(50),
+    timestamp_created timestamp with time zone DEFAULT now(),
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    color_name_full character varying(250)
+);
+
+
+--
+-- TOC entry 3283 (class 0 OID 0)
+-- Dependencies: 199
+-- Name: TABLE dic_color; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.dic_color IS 'Dictionary of colors, with and without Munsell codes, separated into name, qualifier, shade';
+
+
+--
+-- TOC entry 3284 (class 0 OID 0)
+-- Dependencies: 199
+-- Name: COLUMN dic_color.color_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_color.color_id IS 'PK. Unique ID. Generated by the database';
+
+
+--
+-- TOC entry 3285 (class 0 OID 0)
+-- Dependencies: 199
+-- Name: COLUMN dic_color.color_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_color.color_name IS 'Basic color name';
+
+
+--
+-- TOC entry 3286 (class 0 OID 0)
+-- Dependencies: 199
+-- Name: COLUMN dic_color.color_qualifier; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_color.color_qualifier IS 'Color qualifier e.g. greyish, yellowish, greenish etc.';
+
+
+--
+-- TOC entry 3287 (class 0 OID 0)
+-- Dependencies: 199
+-- Name: COLUMN dic_color.color_shade; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_color.color_shade IS 'Color shale e.g. dark, pale, medium dark etc.';
+
+
+--
+-- TOC entry 3288 (class 0 OID 0)
+-- Dependencies: 199
+-- Name: COLUMN dic_color.color_name_full; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_color.color_name_full IS 'Full color name';
+
+
+--
+-- TOC entry 235 (class 1259 OID 274222)
+-- Name: color_color_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.color_color_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3289 (class 0 OID 0)
+-- Dependencies: 235
+-- Name: color_color_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.color_color_id_seq OWNED BY public.dic_color.color_id;
+
+
+--
+-- TOC entry 197 (class 1259 OID 273932)
+-- Name: craton_terrane; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.craton_terrane (
+    craton_terrane_id integer NOT NULL,
+    ct_name character varying(50) NOT NULL,
+    ct_type character varying(50) NOT NULL,
+    ct_notes character varying(4000),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3290 (class 0 OID 0)
+-- Dependencies: 197
+-- Name: TABLE craton_terrane; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.craton_terrane IS 'Name and type of either craton (e.g. Laurentia) or terrane (e.g. Avalonia).';
+
+
+--
+-- TOC entry 3291 (class 0 OID 0)
+-- Dependencies: 197
+-- Name: COLUMN craton_terrane.craton_terrane_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.craton_terrane.craton_terrane_id IS 'PK. Unique ID. Generated by the database';
+
+
+--
+-- TOC entry 3292 (class 0 OID 0)
+-- Dependencies: 197
+-- Name: COLUMN craton_terrane.ct_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.craton_terrane.ct_name IS 'Name of the craton or terrane e.g. Laurentia';
+
+
+--
+-- TOC entry 3293 (class 0 OID 0)
+-- Dependencies: 197
+-- Name: COLUMN craton_terrane.ct_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.craton_terrane.ct_type IS 'Type e.g. craton, terrane';
+
+
+--
+-- TOC entry 3294 (class 0 OID 0)
+-- Dependencies: 197
+-- Name: COLUMN craton_terrane.ct_notes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.craton_terrane.ct_notes IS 'Notes about the craton or terrane';
+
+
+--
+-- TOC entry 237 (class 1259 OID 274241)
+-- Name: craton_terrane_craton_terrane_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.craton_terrane_craton_terrane_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3295 (class 0 OID 0)
+-- Dependencies: 237
+-- Name: craton_terrane_craton_terrane_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.craton_terrane_craton_terrane_id_seq OWNED BY public.craton_terrane.craton_terrane_id;
+
+
+--
+-- TOC entry 238 (class 1259 OID 274243)
+-- Name: data_source; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.data_source (
+    data_source_id integer NOT NULL,
+    data_source character varying(255),
+    data_source_desc character varying(4000),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3296 (class 0 OID 0)
+-- Dependencies: 238
+-- Name: TABLE data_source; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.data_source IS 'Data sources - large scale separation between, for example, external databases and SGP data (e.g. USGS, CMIBS, SGP)';
+
+
+--
+-- TOC entry 3297 (class 0 OID 0)
+-- Dependencies: 238
+-- Name: COLUMN data_source.data_source_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_source.data_source_id IS 'PK. Unique identifier. Generated by database';
+
+
+--
+-- TOC entry 3298 (class 0 OID 0)
+-- Dependencies: 238
+-- Name: COLUMN data_source.data_source; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_source.data_source IS 'Name of the data source: SGP, USGS-NGDB, USGS-CMIBS';
+
+
+--
+-- TOC entry 3299 (class 0 OID 0)
+-- Dependencies: 238
+-- Name: COLUMN data_source.data_source_desc; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_source.data_source_desc IS 'Description of the data source';
+
+
+--
+-- TOC entry 239 (class 1259 OID 274251)
+-- Name: data_source_batch; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.data_source_batch (
+    data_source_id integer NOT NULL,
+    batch_id integer NOT NULL,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3300 (class 0 OID 0)
+-- Dependencies: 239
+-- Name: TABLE data_source_batch; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.data_source_batch IS 'Links analytical batches to data source e.g. SGP, USGS_NGDB, USGS_CMIBS';
+
+
+--
+-- TOC entry 3301 (class 0 OID 0)
+-- Dependencies: 239
+-- Name: COLUMN data_source_batch.data_source_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_source_batch.data_source_id IS 'PK/FK. ID for the sample. Links to the sample table. Part of composite primary key.';
+
+
+--
+-- TOC entry 3302 (class 0 OID 0)
+-- Dependencies: 239
+-- Name: COLUMN data_source_batch.batch_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_source_batch.batch_id IS 'PK/FK. ID for the batch. Links to the batch table. Part of composite primary key.';
+
+
+--
+-- TOC entry 219 (class 1259 OID 274102)
+-- Name: dic_ana_method; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dic_ana_method (
+    ana_method_id integer NOT NULL,
+    ana_method_code character varying(20) NOT NULL,
+    ana_method_translation character varying(100) NOT NULL,
+    ana_method_desc character varying(255),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    reference_id integer
+);
+
+
+--
+-- TOC entry 3303 (class 0 OID 0)
+-- Dependencies: 219
+-- Name: TABLE dic_ana_method; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.dic_ana_method IS 'Dictionary of analytical methods';
+
+
+--
+-- TOC entry 3304 (class 0 OID 0)
+-- Dependencies: 219
+-- Name: COLUMN dic_ana_method.ana_method_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_ana_method.ana_method_id IS 'PK. Unique ID. Generated by the database.';
+
+
+--
+-- TOC entry 3305 (class 0 OID 0)
+-- Dependencies: 219
+-- Name: COLUMN dic_ana_method.ana_method_code; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_ana_method.ana_method_code IS 'Code for analytical method e.g. XRF, ICP:MS etc. Based in part on the list used by EarthChem';
+
+
+--
+-- TOC entry 3306 (class 0 OID 0)
+-- Dependencies: 219
+-- Name: COLUMN dic_ana_method.ana_method_translation; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_ana_method.ana_method_translation IS 'General description of the method';
+
+
+--
+-- TOC entry 3307 (class 0 OID 0)
+-- Dependencies: 219
+-- Name: COLUMN dic_ana_method.ana_method_desc; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_ana_method.ana_method_desc IS 'Detailed description of the method';
+
+
+--
+-- TOC entry 3308 (class 0 OID 0)
+-- Dependencies: 219
+-- Name: COLUMN dic_ana_method.reference_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_ana_method.reference_id IS 'FK. ID for the reference_work. Links to reference_work table.';
+
+
+--
+-- TOC entry 246 (class 1259 OID 274327)
+-- Name: dic_analysis_method_method_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.dic_analysis_method_method_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3309 (class 0 OID 0)
+-- Dependencies: 246
+-- Name: dic_analysis_method_method_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.dic_analysis_method_method_id_seq OWNED BY public.dic_ana_method.ana_method_id;
+
+
+--
+-- TOC entry 221 (class 1259 OID 274112)
+-- Name: dic_prep_method; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dic_prep_method (
+    prep_id integer NOT NULL,
+    prep_translation character varying(60),
+    prep_desc character varying(255),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3310 (class 0 OID 0)
+-- Dependencies: 221
+-- Name: TABLE dic_prep_method; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.dic_prep_method IS 'Dictionary of sample preparation methods';
+
+
+--
+-- TOC entry 3311 (class 0 OID 0)
+-- Dependencies: 221
+-- Name: COLUMN dic_prep_method.prep_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_prep_method.prep_id IS 'PK. Unique identifier. Generated by the database';
+
+
+--
+-- TOC entry 3312 (class 0 OID 0)
+-- Dependencies: 221
+-- Name: COLUMN dic_prep_method.prep_translation; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_prep_method.prep_translation IS 'General description of the method';
+
+
+--
+-- TOC entry 3313 (class 0 OID 0)
+-- Dependencies: 221
+-- Name: COLUMN dic_prep_method.prep_desc; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_prep_method.prep_desc IS 'Detailed description of the method';
+
+
+--
+-- TOC entry 247 (class 1259 OID 274329)
+-- Name: dic_analysis_prep_prep_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.dic_analysis_prep_prep_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3314 (class 0 OID 0)
+-- Dependencies: 247
+-- Name: dic_analysis_prep_prep_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.dic_analysis_prep_prep_id_seq OWNED BY public.dic_prep_method.prep_id;
+
+
+--
+-- TOC entry 248 (class 1259 OID 274331)
+-- Name: dic_analyte; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dic_analyte (
+    analyte_code character varying(100) NOT NULL,
+    analyte_translation character varying(100),
+    analyte_desc character varying(255),
+    atomic_num integer,
+    weight numeric(6,3),
+    timestamp_created timestamp with time zone DEFAULT now(),
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    preferred_unit character varying(100)
+);
+
+
+--
+-- TOC entry 3315 (class 0 OID 0)
+-- Dependencies: 248
+-- Name: TABLE dic_analyte; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.dic_analyte IS 'Dictionary of chemical analytes';
+
+
+--
+-- TOC entry 3316 (class 0 OID 0)
+-- Dependencies: 248
+-- Name: COLUMN dic_analyte.analyte_code; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_analyte.analyte_code IS 'PK. Unique identifier for each geochemical analyte. Chemical symbol or accepted code e.g. FeT, Fe-carb, 34S-CAS etc.';
+
+
+--
+-- TOC entry 3317 (class 0 OID 0)
+-- Dependencies: 248
+-- Name: COLUMN dic_analyte.analyte_translation; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_analyte.analyte_translation IS 'Short description of the analyte e.g. Iron, Carbonate-associated iron etc.';
+
+
+--
+-- TOC entry 3318 (class 0 OID 0)
+-- Dependencies: 248
+-- Name: COLUMN dic_analyte.analyte_desc; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_analyte.analyte_desc IS 'Longer description of the analyte e.g. Carbonate-associated iron (e.g. iron in siderite, iron in ankerite), extracted as the first step in a sequential extraction (method SeqA)';
+
+
+--
+-- TOC entry 3319 (class 0 OID 0)
+-- Dependencies: 248
+-- Name: COLUMN dic_analyte.atomic_num; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_analyte.atomic_num IS 'Atomic number for those analytes that are chemical elements';
+
+
+--
+-- TOC entry 3320 (class 0 OID 0)
+-- Dependencies: 248
+-- Name: COLUMN dic_analyte.weight; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_analyte.weight IS 'Atomic weight';
+
+
+--
+-- TOC entry 198 (class 1259 OID 273940)
+-- Name: dic_basin_type; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dic_basin_type (
+    basin_type_id integer NOT NULL,
+    basin_type character varying(100) NOT NULL,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3321 (class 0 OID 0)
+-- Dependencies: 198
+-- Name: TABLE dic_basin_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.dic_basin_type IS 'Dictionary of basin types';
+
+
+--
+-- TOC entry 3322 (class 0 OID 0)
+-- Dependencies: 198
+-- Name: COLUMN dic_basin_type.basin_type_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_basin_type.basin_type_id IS 'PK. Unique identifier. Generated by the database';
+
+
+--
+-- TOC entry 3323 (class 0 OID 0)
+-- Dependencies: 198
+-- Name: COLUMN dic_basin_type.basin_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_basin_type.basin_type IS 'Basin type, e.g. rift, peripheral foreland etc.';
+
+
+--
+-- TOC entry 249 (class 1259 OID 274339)
+-- Name: dic_basin_type_basin_type_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.dic_basin_type_basin_type_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3324 (class 0 OID 0)
+-- Dependencies: 249
+-- Name: dic_basin_type_basin_type_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.dic_basin_type_basin_type_id_seq OWNED BY public.dic_basin_type.basin_type_id;
+
+
+--
+-- TOC entry 250 (class 1259 OID 274341)
+-- Name: dic_biostrat; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dic_biostrat (
+    dic_biostrat_id integer NOT NULL,
+    biozone_name character varying(255),
+    biozone_fossil_type character varying(100),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3325 (class 0 OID 0)
+-- Dependencies: 250
+-- Name: TABLE dic_biostrat; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.dic_biostrat IS 'Dictionary of biozones. Not often used - verbatim biostrat is stored in biostrat.';
+
+
+--
+-- TOC entry 3326 (class 0 OID 0)
+-- Dependencies: 250
+-- Name: COLUMN dic_biostrat.biozone_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_biostrat.biozone_name IS 'Name of the biozone';
+
+
+--
+-- TOC entry 3327 (class 0 OID 0)
+-- Dependencies: 250
+-- Name: COLUMN dic_biostrat.biozone_fossil_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_biostrat.biozone_fossil_type IS 'Type of organism used to define the zone - graptolite, trilobite etc.';
+
+
+--
+-- TOC entry 251 (class 1259 OID 274346)
+-- Name: dic_biostrat_dic_biostrat_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.dic_biostrat_dic_biostrat_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3328 (class 0 OID 0)
+-- Dependencies: 251
+-- Name: dic_biostrat_dic_biostrat_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.dic_biostrat_dic_biostrat_id_seq OWNED BY public.dic_biostrat.dic_biostrat_id;
+
+
+--
+-- TOC entry 252 (class 1259 OID 274348)
+-- Name: dic_continent; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dic_continent (
+    iso_code character(2) NOT NULL,
+    continent character varying(255)
+);
+
+
+--
+-- TOC entry 3329 (class 0 OID 0)
+-- Dependencies: 252
+-- Name: TABLE dic_continent; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.dic_continent IS 'Dictionary of contintents and oceans';
+
+
+--
+-- TOC entry 3330 (class 0 OID 0)
+-- Dependencies: 252
+-- Name: COLUMN dic_continent.iso_code; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_continent.iso_code IS 'ISO Continent code, or CIA code for oceans';
+
+
+--
+-- TOC entry 236 (class 1259 OID 274228)
+-- Name: dic_country; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dic_country (
+    iso_code character(2),
+    country character varying(64) NOT NULL,
+    full_name character varying(128),
+    iso3 character varying(3),
+    iso_number integer,
+    continent_code character varying(2) NOT NULL
+);
+
+
+--
+-- TOC entry 3331 (class 0 OID 0)
+-- Dependencies: 236
+-- Name: TABLE dic_country; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.dic_country IS 'Dictionary of countries and seas';
+
+
+--
+-- TOC entry 3332 (class 0 OID 0)
+-- Dependencies: 236
+-- Name: COLUMN dic_country.iso_code; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_country.iso_code IS 'Two-letter country code (ISO 3166-1 alpha-2)';
+
+
+--
+-- TOC entry 3333 (class 0 OID 0)
+-- Dependencies: 236
+-- Name: COLUMN dic_country.country; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_country.country IS 'English country name';
+
+
+--
+-- TOC entry 3334 (class 0 OID 0)
+-- Dependencies: 236
+-- Name: COLUMN dic_country.full_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_country.full_name IS 'Full English country name';
+
+
+--
+-- TOC entry 3335 (class 0 OID 0)
+-- Dependencies: 236
+-- Name: COLUMN dic_country.iso3; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_country.iso3 IS 'Three-letter country code (ISO 3166-1 alpha-3)';
+
+
+--
+-- TOC entry 3336 (class 0 OID 0)
+-- Dependencies: 236
+-- Name: COLUMN dic_country.iso_number; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_country.iso_number IS 'Three-digit country number (ISO 3166-1 numeric)';
+
+
+--
+-- TOC entry 253 (class 1259 OID 274351)
+-- Name: dic_data_source_data_source_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.dic_data_source_data_source_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3337 (class 0 OID 0)
+-- Dependencies: 253
+-- Name: dic_data_source_data_source_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.dic_data_source_data_source_id_seq OWNED BY public.data_source.data_source_id;
+
+
+--
+-- TOC entry 220 (class 1259 OID 274107)
+-- Name: dic_exp_method; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dic_exp_method (
+    exp_method_id integer NOT NULL,
+    exp_method_code character varying(20) NOT NULL,
+    exp_method_translation character varying(100) NOT NULL,
+    exp_method_desc character varying(255),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    reference_id integer
+);
+
+
+--
+-- TOC entry 3338 (class 0 OID 0)
+-- Dependencies: 220
+-- Name: TABLE dic_exp_method; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.dic_exp_method IS 'Dictionary of experimental methods';
+
+
+--
+-- TOC entry 3339 (class 0 OID 0)
+-- Dependencies: 220
+-- Name: COLUMN dic_exp_method.exp_method_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_exp_method.exp_method_id IS 'PK. Unique identifier. Generated by the database';
+
+
+--
+-- TOC entry 3340 (class 0 OID 0)
+-- Dependencies: 220
+-- Name: COLUMN dic_exp_method.exp_method_code; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_exp_method.exp_method_code IS 'Code for the experimental method e.g. CRS';
+
+
+--
+-- TOC entry 3341 (class 0 OID 0)
+-- Dependencies: 220
+-- Name: COLUMN dic_exp_method.exp_method_translation; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_exp_method.exp_method_translation IS 'General description of the method';
+
+
+--
+-- TOC entry 3342 (class 0 OID 0)
+-- Dependencies: 220
+-- Name: COLUMN dic_exp_method.exp_method_desc; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_exp_method.exp_method_desc IS 'Detailed description of the method';
+
+
+--
+-- TOC entry 3343 (class 0 OID 0)
+-- Dependencies: 220
+-- Name: COLUMN dic_exp_method.reference_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_exp_method.reference_id IS 'FK. ID for the reference work for the method. Links to the reference_work table.';
+
+
+--
+-- TOC entry 254 (class 1259 OID 274353)
+-- Name: dic_exp_method_exp_method_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.dic_exp_method_exp_method_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3344 (class 0 OID 0)
+-- Dependencies: 254
+-- Name: dic_exp_method_exp_method_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.dic_exp_method_exp_method_id_seq OWNED BY public.dic_exp_method.exp_method_id;
+
+
+--
+-- TOC entry 192 (class 1259 OID 273885)
+-- Name: dic_ics_age; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dic_ics_age (
+    ics_id integer NOT NULL,
+    ics_name character varying(50) NOT NULL,
+    earliest_age numeric(12,4),
+    latest_age numeric(12,4),
+    ics_parent_id integer,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    ics_level integer
+);
+
+
+--
+-- TOC entry 3345 (class 0 OID 0)
+-- Dependencies: 192
+-- Name: TABLE dic_ics_age; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.dic_ics_age IS 'Dictionary of International Commission on Stratigraphy, International Chronostratigraphic timescale. See http://www.stratigraphy.org';
+
+
+--
+-- TOC entry 3346 (class 0 OID 0)
+-- Dependencies: 192
+-- Name: COLUMN dic_ics_age.ics_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_ics_age.ics_id IS 'PK. Unique identifier. Generated by database';
+
+
+--
+-- TOC entry 3347 (class 0 OID 0)
+-- Dependencies: 192
+-- Name: COLUMN dic_ics_age.ics_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_ics_age.ics_name IS 'Name of the time period';
+
+
+--
+-- TOC entry 3348 (class 0 OID 0)
+-- Dependencies: 192
+-- Name: COLUMN dic_ics_age.earliest_age; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_ics_age.earliest_age IS 'Earliest age';
+
+
+--
+-- TOC entry 3349 (class 0 OID 0)
+-- Dependencies: 192
+-- Name: COLUMN dic_ics_age.latest_age; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_ics_age.latest_age IS 'Latest age';
+
+
+--
+-- TOC entry 3350 (class 0 OID 0)
+-- Dependencies: 192
+-- Name: COLUMN dic_ics_age.ics_parent_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_ics_age.ics_parent_id IS 'Parent id, refers to the ics_id column';
+
+
+--
+-- TOC entry 3351 (class 0 OID 0)
+-- Dependencies: 192
+-- Name: COLUMN dic_ics_age.ics_level; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_ics_age.ics_level IS 'Level of age unit 1=Eonothem, 2=Erathem, 3=System, 4=Series, 5=Stage ';
+
+
+--
+-- TOC entry 255 (class 1259 OID 274355)
+-- Name: dic_institution_type; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dic_institution_type (
+    institution_type character varying(255) NOT NULL,
+    institution_type_desc character varying(5000),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3352 (class 0 OID 0)
+-- Dependencies: 255
+-- Name: TABLE dic_institution_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.dic_institution_type IS 'Dictionary of institution types, from ODM2 (http://odm2.github.io/ODM2/schemas/ODM2_Current/index.html) with additions';
+
+
+--
+-- TOC entry 3353 (class 0 OID 0)
+-- Dependencies: 255
+-- Name: COLUMN dic_institution_type.institution_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_institution_type.institution_type IS 'Type of institution';
+
+
+--
+-- TOC entry 3354 (class 0 OID 0)
+-- Dependencies: 255
+-- Name: COLUMN dic_institution_type.institution_type_desc; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_institution_type.institution_type_desc IS 'Description of the institution type';
+
+
+--
+-- TOC entry 200 (class 1259 OID 273950)
+-- Name: dic_lith_composition; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dic_lith_composition (
+    lith_composition_id integer NOT NULL,
+    lith_composition character varying(100),
+    lith_composition_desc character varying(255),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3355 (class 0 OID 0)
+-- Dependencies: 200
+-- Name: TABLE dic_lith_composition; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.dic_lith_composition IS 'Dictionary of terms to describe the composition of samples e.g. calcareous, siliceous, carbonaceous. Based on table from Potter et al. 2005 Mud and Mudstones';
+
+
+--
+-- TOC entry 3356 (class 0 OID 0)
+-- Dependencies: 200
+-- Name: COLUMN dic_lith_composition.lith_composition_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lith_composition.lith_composition_id IS 'PK. Unique identifier. Generated by database';
+
+
+--
+-- TOC entry 3357 (class 0 OID 0)
+-- Dependencies: 200
+-- Name: COLUMN dic_lith_composition.lith_composition; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lith_composition.lith_composition IS 'Compositional term, e.g. calcareous, siliceous';
+
+
+--
+-- TOC entry 3358 (class 0 OID 0)
+-- Dependencies: 200
+-- Name: COLUMN dic_lith_composition.lith_composition_desc; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lith_composition.lith_composition_desc IS 'Description/definition of compositonal term';
+
+
+--
+-- TOC entry 256 (class 1259 OID 274363)
+-- Name: dic_lith_comp_lith_comp_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.dic_lith_comp_lith_comp_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3359 (class 0 OID 0)
+-- Dependencies: 256
+-- Name: dic_lith_comp_lith_comp_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.dic_lith_comp_lith_comp_id_seq OWNED BY public.dic_lith_composition.lith_composition_id;
+
+
+--
+-- TOC entry 201 (class 1259 OID 273955)
+-- Name: dic_lith_texture; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dic_lith_texture (
+    lith_texture_id integer NOT NULL,
+    lith_texture character varying(100),
+    lith_texture_desc character varying(255),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3360 (class 0 OID 0)
+-- Dependencies: 201
+-- Name: TABLE dic_lith_texture; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.dic_lith_texture IS 'Dictionary of terms to describe the lithological texture of samples e.g. silty, muddy, clayey, sandy. Based on table from Potter et al. 2005 Mud and Mudstones';
+
+
+--
+-- TOC entry 3361 (class 0 OID 0)
+-- Dependencies: 201
+-- Name: COLUMN dic_lith_texture.lith_texture_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lith_texture.lith_texture_id IS 'PK. Unique identifier. Generated by database';
+
+
+--
+-- TOC entry 3362 (class 0 OID 0)
+-- Dependencies: 201
+-- Name: COLUMN dic_lith_texture.lith_texture; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lith_texture.lith_texture IS 'Textural term, e.g. silty, sandy';
+
+
+--
+-- TOC entry 3363 (class 0 OID 0)
+-- Dependencies: 201
+-- Name: COLUMN dic_lith_texture.lith_texture_desc; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lith_texture.lith_texture_desc IS 'Description/definition of textural term';
+
+
+--
+-- TOC entry 257 (class 1259 OID 274365)
+-- Name: dic_lith_texture_lith_texture_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.dic_lith_texture_lith_texture_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3364 (class 0 OID 0)
+-- Dependencies: 257
+-- Name: dic_lith_texture_lith_texture_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.dic_lith_texture_lith_texture_id_seq OWNED BY public.dic_lith_texture.lith_texture_id;
+
+
+--
+-- TOC entry 202 (class 1259 OID 273960)
+-- Name: dic_lithology; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dic_lithology (
+    lith_id integer NOT NULL,
+    lith_name character varying(100),
+    lith_type character varying(50),
+    lith_class character varying(50),
+    timestamp_created timestamp with time zone DEFAULT now(),
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3365 (class 0 OID 0)
+-- Dependencies: 202
+-- Name: TABLE dic_lithology; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.dic_lithology IS 'Dictionary table of lithological terms, based in part on Macrostrat';
+
+
+--
+-- TOC entry 3366 (class 0 OID 0)
+-- Dependencies: 202
+-- Name: COLUMN dic_lithology.lith_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithology.lith_id IS 'PK. Unique identifier. Generated by database';
+
+
+--
+-- TOC entry 3367 (class 0 OID 0)
+-- Dependencies: 202
+-- Name: COLUMN dic_lithology.lith_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithology.lith_name IS 'Lithological name e.g. shale, mudstone ';
+
+
+--
+-- TOC entry 3368 (class 0 OID 0)
+-- Dependencies: 202
+-- Name: COLUMN dic_lithology.lith_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithology.lith_type IS 'Lithological type e.g. siliciclastic, carbonate, chemical';
+
+
+--
+-- TOC entry 3369 (class 0 OID 0)
+-- Dependencies: 202
+-- Name: COLUMN dic_lithology.lith_class; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithology.lith_class IS 'Lithological class e.g. sedimentary, metamorphic';
+
+
+--
+-- TOC entry 258 (class 1259 OID 274367)
+-- Name: dic_lithology_lith_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.dic_lithology_lith_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3370 (class 0 OID 0)
+-- Dependencies: 258
+-- Name: dic_lithology_lith_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.dic_lithology_lith_id_seq OWNED BY public.dic_lithology.lith_id;
+
+
+--
+-- TOC entry 203 (class 1259 OID 273965)
+-- Name: dic_lithostrat_strat_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.dic_lithostrat_strat_id_seq
+    START WITH 80625
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 204 (class 1259 OID 273967)
+-- Name: dic_lithostrat; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dic_lithostrat (
+    strat_id integer DEFAULT nextval('public.dic_lithostrat_strat_id_seq'::regclass) NOT NULL,
+    strat_name character varying(100),
+    strat_name_long character varying(100),
+    rank character varying(10),
+    macrostrat_id integer,
+    concept_id integer,
+    bed character varying(100),
+    bed_id integer,
+    mbr character varying(100),
+    mbr_id integer,
+    fm character varying(100),
+    fm_id integer,
+    gp character varying(100),
+    gp_id integer,
+    sgp character varying(100),
+    sgp_id integer,
+    b_age numeric(12,6),
+    t_age numeric(12,6),
+    gsc_lexicon character varying(100),
+    t_units integer,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    bgs_code character varying(10),
+    asud_stratno integer,
+    is_informal boolean
+);
+
+
+--
+-- TOC entry 3371 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: TABLE dic_lithostrat; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.dic_lithostrat IS 'Dictionary of lithostratigraphic names, populated from Macrostrat (in Nov 2015, up to lithostrat_id 80624), with subsequent additions in the same format. Columns were adopted directly from Macrostrat, and therefore some may not be directly relevent to SGP - for example concept_id. They are nevertheless retained in case they prove useful for cross-referencing. Table also includes identifiers from national stratigraphic databases i.e. BGS, GSC, and ASUD';
+
+
+--
+-- TOC entry 3372 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: COLUMN dic_lithostrat.strat_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithostrat.strat_id IS 'PK. Unique identifier. Generated by database';
+
+
+--
+-- TOC entry 3373 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: COLUMN dic_lithostrat.strat_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithostrat.strat_name IS 'From Macrostrat: text, informal unit name';
+
+
+--
+-- TOC entry 3374 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: COLUMN dic_lithostrat.strat_name_long; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithostrat.strat_name_long IS 'text, informal unit name';
+
+
+--
+-- TOC entry 3375 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: COLUMN dic_lithostrat.rank; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithostrat.rank IS 'From Macrostrat: text, the stratigraphic rank of the unit';
+
+
+--
+-- TOC entry 3376 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: COLUMN dic_lithostrat.macrostrat_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithostrat.macrostrat_id IS 'From Macrostrat where it is known as ''strat_name_id'': integer, unique identifier for known stratigraphic name (see /defs/strat_names)';
+
+
+--
+-- TOC entry 3377 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: COLUMN dic_lithostrat.concept_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithostrat.concept_id IS 'From Macrostrat: intger, unique identifier for the stratigraphic name concept, which groups variant strat_names for same entity';
+
+
+--
+-- TOC entry 3378 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: COLUMN dic_lithostrat.bed; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithostrat.bed IS 'From Macrostrat: string, the strat_name of the bed';
+
+
+--
+-- TOC entry 3379 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: COLUMN dic_lithostrat.bed_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithostrat.bed_id IS 'From Macrostrat: integer, the strat_name_id of the bed';
+
+
+--
+-- TOC entry 3380 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: COLUMN dic_lithostrat.mbr; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithostrat.mbr IS 'From Macrostrat: text, lithostratigraphic member';
+
+
+--
+-- TOC entry 3381 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: COLUMN dic_lithostrat.mbr_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithostrat.mbr_id IS 'From Macrostrat: integer, the strat_name_id of the member';
+
+
+--
+-- TOC entry 3382 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: COLUMN dic_lithostrat.fm; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithostrat.fm IS 'From Macrostrat: text, lithostratigraphic formation';
+
+
+--
+-- TOC entry 3383 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: COLUMN dic_lithostrat.fm_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithostrat.fm_id IS 'From Macrostrat: integer, the strat_name_id of the formation';
+
+
+--
+-- TOC entry 3384 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: COLUMN dic_lithostrat.gp; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithostrat.gp IS 'From Macrostrat: text, lithostratigraphic group';
+
+
+--
+-- TOC entry 3385 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: COLUMN dic_lithostrat.gp_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithostrat.gp_id IS 'From Macrostrat: integer, the strat_name_id of the group';
+
+
+--
+-- TOC entry 3386 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: COLUMN dic_lithostrat.sgp; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithostrat.sgp IS 'From Macrostrat: text, lithostratigraphic supergroup';
+
+
+--
+-- TOC entry 3387 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: COLUMN dic_lithostrat.sgp_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithostrat.sgp_id IS 'From Macrostrat: integer, the strat_name_id of the supergroup';
+
+
+--
+-- TOC entry 3388 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: COLUMN dic_lithostrat.b_age; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithostrat.b_age IS 'From Macrostrat: number, continuous time age model estimated for initiation, in Myr before present';
+
+
+--
+-- TOC entry 3389 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: COLUMN dic_lithostrat.t_age; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithostrat.t_age IS 'From Macrostrat: number, continuous time age model estimated for truncation, in Myr before present';
+
+
+--
+-- TOC entry 3390 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: COLUMN dic_lithostrat.gsc_lexicon; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithostrat.gsc_lexicon IS 'From Macrostrat:  integer, the strat_name_id of the supergroup';
+
+
+--
+-- TOC entry 3391 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: COLUMN dic_lithostrat.bgs_code; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithostrat.bgs_code IS 'Identifier from the BGS Lexicon of Named Rock Units (https://www.bgs.ac.uk/Lexicon/). Older BGS codes are numerical';
+
+
+--
+-- TOC entry 3392 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: COLUMN dic_lithostrat.asud_stratno; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithostrat.asud_stratno IS 'Identifier from the Australian Stratigraphic Units Database (ASUD, https://asud.ga.gov.au/)';
+
+
+--
+-- TOC entry 3393 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: COLUMN dic_lithostrat.is_informal; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_lithostrat.is_informal IS 'Whether the name is an informal one e.g. not yet published, colloquial name';
+
+
+--
+-- TOC entry 205 (class 1259 OID 273976)
+-- Name: dic_meta; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dic_meta (
+    meta_id integer NOT NULL,
+    meta_name character varying,
+    meta_desc character varying,
+    maturity character varying,
+    biomarkers character varying,
+    ki character varying,
+    cai character varying,
+    ro character varying,
+    facies character varying,
+    grade character varying
+);
+
+
+--
+-- TOC entry 3394 (class 0 OID 0)
+-- Dependencies: 205
+-- Name: TABLE dic_meta; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.dic_meta IS 'Dictionary of low-temperature metamorphic bins, based roughly on metapelite zones';
+
+
+--
+-- TOC entry 3395 (class 0 OID 0)
+-- Dependencies: 205
+-- Name: COLUMN dic_meta.meta_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_meta.meta_name IS 'Name of the bin, primarily low-temp, low-grade  - Diagenetic zone, Epizone, Anchizone.';
+
+
+--
+-- TOC entry 3396 (class 0 OID 0)
+-- Dependencies: 205
+-- Name: COLUMN dic_meta.meta_desc; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_meta.meta_desc IS 'General description of the bin';
+
+
+--
+-- TOC entry 3397 (class 0 OID 0)
+-- Dependencies: 205
+-- Name: COLUMN dic_meta.maturity; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_meta.maturity IS 'Thermal maturity in context of organic matter and hydrocarbon production';
+
+
+--
+-- TOC entry 3398 (class 0 OID 0)
+-- Dependencies: 205
+-- Name: COLUMN dic_meta.biomarkers; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_meta.biomarkers IS 'Whether biomarkers are preserved';
+
+
+--
+-- TOC entry 3399 (class 0 OID 0)
+-- Dependencies: 205
+-- Name: COLUMN dic_meta.ro; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_meta.ro IS 'Vitrinite reflectance. From AAPG: percentage of incident light reflected from the surface of vitrinite particles in a sedimentary rock.';
+
+
+--
+-- TOC entry 3400 (class 0 OID 0)
+-- Dependencies: 205
+-- Name: COLUMN dic_meta.facies; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_meta.facies IS 'Metamorphic facies';
+
+
+--
+-- TOC entry 3401 (class 0 OID 0)
+-- Dependencies: 205
+-- Name: COLUMN dic_meta.grade; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_meta.grade IS 'Metamorphic grade';
+
+
+--
+-- TOC entry 259 (class 1259 OID 274369)
+-- Name: dic_meta_meta_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.dic_meta_meta_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3402 (class 0 OID 0)
+-- Dependencies: 259
+-- Name: dic_meta_meta_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.dic_meta_meta_id_seq OWNED BY public.dic_meta.meta_id;
+
+
+--
+-- TOC entry 260 (class 1259 OID 274371)
+-- Name: dic_project_type; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dic_project_type (
+    project_type character varying(255) NOT NULL,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    project_desc character varying(255)
+);
+
+
+--
+-- TOC entry 3403 (class 0 OID 0)
+-- Dependencies: 260
+-- Name: TABLE dic_project_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.dic_project_type IS 'Dictionary of project types.';
+
+
+--
+-- TOC entry 3404 (class 0 OID 0)
+-- Dependencies: 260
+-- Name: COLUMN dic_project_type.project_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_project_type.project_type IS 'Type of project';
+
+
+--
+-- TOC entry 3405 (class 0 OID 0)
+-- Dependencies: 260
+-- Name: COLUMN dic_project_type.project_desc; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_project_type.project_desc IS 'Description of project type';
+
+
+--
+-- TOC entry 261 (class 1259 OID 274379)
+-- Name: dic_proxy; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dic_proxy (
+    proxy_id integer NOT NULL,
+    proxy character varying(20) NOT NULL,
+    proxy_desc character varying(255),
+    proxy_notes character varying(4000),
+    reference_id integer,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3406 (class 0 OID 0)
+-- Dependencies: 261
+-- Name: TABLE dic_proxy; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.dic_proxy IS 'Dictionary of geochemical proxies (e.g. FeHR/FeT)';
+
+
+--
+-- TOC entry 3407 (class 0 OID 0)
+-- Dependencies: 261
+-- Name: COLUMN dic_proxy.proxy_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_proxy.proxy_id IS 'PK. Unique identifier. Generated by the database';
+
+
+--
+-- TOC entry 3408 (class 0 OID 0)
+-- Dependencies: 261
+-- Name: COLUMN dic_proxy.proxy; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_proxy.proxy IS 'Proxy abbreviation or code (e.g. FeHR/FeT, FePR, Ni/Co etc.) ';
+
+
+--
+-- TOC entry 3409 (class 0 OID 0)
+-- Dependencies: 261
+-- Name: COLUMN dic_proxy.proxy_desc; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_proxy.proxy_desc IS 'Longer description or breakdown of proxy';
+
+
+--
+-- TOC entry 3410 (class 0 OID 0)
+-- Dependencies: 261
+-- Name: COLUMN dic_proxy.proxy_notes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_proxy.proxy_notes IS 'Notes about the proxy (e.g. updated method for determining highly-reactive to total iron)';
+
+
+--
+-- TOC entry 3411 (class 0 OID 0)
+-- Dependencies: 261
+-- Name: COLUMN dic_proxy.reference_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_proxy.reference_id IS 'FK. ID for the publication which originally described the proxy. Links to reference_work table';
+
+
+--
+-- TOC entry 262 (class 1259 OID 274387)
+-- Name: dic_proxy_proxy_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.dic_proxy_proxy_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3412 (class 0 OID 0)
+-- Dependencies: 262
+-- Name: dic_proxy_proxy_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.dic_proxy_proxy_id_seq OWNED BY public.dic_proxy.proxy_id;
+
+
+--
+-- TOC entry 263 (class 1259 OID 274389)
+-- Name: dic_publication; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dic_publication (
+    publication_id integer NOT NULL,
+    publication_name character varying(500) NOT NULL,
+    publication_abbreviation character varying(50),
+    publisher_name character varying(255),
+    publisher_location character varying(50),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    issn character varying(100)
+);
+
+
+--
+-- TOC entry 3413 (class 0 OID 0)
+-- Dependencies: 263
+-- Name: TABLE dic_publication; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.dic_publication IS 'Dictionary of publications - mostly scientific journals.';
+
+
+--
+-- TOC entry 3414 (class 0 OID 0)
+-- Dependencies: 263
+-- Name: COLUMN dic_publication.publication_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_publication.publication_id IS 'PK. Unique identifier. Generated by database';
+
+
+--
+-- TOC entry 3415 (class 0 OID 0)
+-- Dependencies: 263
+-- Name: COLUMN dic_publication.publication_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_publication.publication_name IS 'Name of the journal/publication';
+
+
+--
+-- TOC entry 3416 (class 0 OID 0)
+-- Dependencies: 263
+-- Name: COLUMN dic_publication.publication_abbreviation; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_publication.publication_abbreviation IS 'Abbreviation of the journal name';
+
+
+--
+-- TOC entry 3417 (class 0 OID 0)
+-- Dependencies: 263
+-- Name: COLUMN dic_publication.publisher_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_publication.publisher_name IS 'Publisher name';
+
+
+--
+-- TOC entry 3418 (class 0 OID 0)
+-- Dependencies: 263
+-- Name: COLUMN dic_publication.publisher_location; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_publication.publisher_location IS 'Place of publication';
+
+
+--
+-- TOC entry 3419 (class 0 OID 0)
+-- Dependencies: 263
+-- Name: COLUMN dic_publication.issn; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_publication.issn IS 'International Standard Serial Number';
+
+
+--
+-- TOC entry 264 (class 1259 OID 274397)
+-- Name: dic_publication_publication_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.dic_publication_publication_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3420 (class 0 OID 0)
+-- Dependencies: 264
+-- Name: dic_publication_publication_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.dic_publication_publication_id_seq OWNED BY public.dic_publication.publication_id;
+
+
+--
+-- TOC entry 240 (class 1259 OID 274266)
+-- Name: dic_sed_structure_sed_structure_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.dic_sed_structure_sed_structure_id_seq
+    START WITH 31
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 241 (class 1259 OID 274268)
+-- Name: dic_sed_structure; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dic_sed_structure (
+    sed_structure_id integer DEFAULT nextval('public.dic_sed_structure_sed_structure_id_seq'::regclass) NOT NULL,
+    sed_structure_name character varying(255) NOT NULL,
+    sed_structure_desc character varying(255),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3421 (class 0 OID 0)
+-- Dependencies: 241
+-- Name: TABLE dic_sed_structure; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.dic_sed_structure IS 'Dictionary of sedimentary structures';
+
+
+--
+-- TOC entry 3422 (class 0 OID 0)
+-- Dependencies: 241
+-- Name: COLUMN dic_sed_structure.sed_structure_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_sed_structure.sed_structure_id IS 'PK. Unique identifier of the sedimentary structure. Generated by database.';
+
+
+--
+-- TOC entry 3423 (class 0 OID 0)
+-- Dependencies: 241
+-- Name: COLUMN dic_sed_structure.sed_structure_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_sed_structure.sed_structure_name IS 'Name of the sedimentary structure';
+
+
+--
+-- TOC entry 265 (class 1259 OID 274399)
+-- Name: dic_weathering; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dic_weathering (
+    weath_grade character varying(5) NOT NULL,
+    weath_term character varying(100),
+    weath_desc character varying(4000),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3424 (class 0 OID 0)
+-- Dependencies: 265
+-- Name: TABLE dic_weathering; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.dic_weathering IS 'Dictionary of weathering terms from the International Society for Rock Mechanics (and others)';
+
+
+--
+-- TOC entry 3425 (class 0 OID 0)
+-- Dependencies: 265
+-- Name: COLUMN dic_weathering.weath_grade; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_weathering.weath_grade IS 'PK. Numbered gradation, with I being the least weathered and VI the most weathered';
+
+
+--
+-- TOC entry 3426 (class 0 OID 0)
+-- Dependencies: 265
+-- Name: COLUMN dic_weathering.weath_term; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_weathering.weath_term IS 'Short descriptive term of weathering grade';
+
+
+--
+-- TOC entry 3427 (class 0 OID 0)
+-- Dependencies: 265
+-- Name: COLUMN dic_weathering.weath_desc; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.dic_weathering.weath_desc IS 'Descriptive definition of weathering grades';
+
+
+--
+-- TOC entry 206 (class 1259 OID 273982)
+-- Name: environment; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.environment (
+    env_id integer NOT NULL,
+    env_notes character varying(4000),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    is_turbiditic boolean,
+    temp_deg_c numeric(5,2),
+    verbatim_env character varying(250),
+    env_bin character varying,
+    CONSTRAINT envchk CHECK (((env_bin)::text = ANY (ARRAY['inner shelf'::text, 'outer shelf'::text, 'basinal'::text, 'lacustrine'::text, 'fluvial'::text])))
+);
+
+
+--
+-- TOC entry 3428 (class 0 OID 0)
+-- Dependencies: 206
+-- Name: TABLE environment; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.environment IS 'Depositional environment details - primarily concerned with water depth, also records whether or not sediments are turbidites';
+
+
+--
+-- TOC entry 3429 (class 0 OID 0)
+-- Dependencies: 206
+-- Name: COLUMN environment.env_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.environment.env_id IS 'PK. Unique identifier for reported environment. Generated by database';
+
+
+--
+-- TOC entry 3430 (class 0 OID 0)
+-- Dependencies: 206
+-- Name: COLUMN environment.env_notes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.environment.env_notes IS 'Notes about the depositional environment.';
+
+
+--
+-- TOC entry 3431 (class 0 OID 0)
+-- Dependencies: 206
+-- Name: COLUMN environment.is_turbiditic; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.environment.is_turbiditic IS 'Whether the environment was turbiditic.';
+
+
+--
+-- TOC entry 3432 (class 0 OID 0)
+-- Dependencies: 206
+-- Name: COLUMN environment.temp_deg_c; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.environment.temp_deg_c IS 'Temperature in celcius, applies to modern environments where water temperature was directly measured.';
+
+
+--
+-- TOC entry 3433 (class 0 OID 0)
+-- Dependencies: 206
+-- Name: COLUMN environment.verbatim_env; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.environment.verbatim_env IS 'Verbatim depositional environment.';
+
+
+--
+-- TOC entry 3434 (class 0 OID 0)
+-- Dependencies: 206
+-- Name: COLUMN environment.env_bin; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.environment.env_bin IS 'Environmental bin: Inner Shelf (1), Outer Shelf (2) and Basinal (3), Lacustrine (4), Fluvial (5). See Sperling et al. 2015 for description.';
+
+
+--
+-- TOC entry 266 (class 1259 OID 274415)
+-- Name: environment_env_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.environment_env_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3435 (class 0 OID 0)
+-- Dependencies: 266
+-- Name: environment_env_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.environment_env_id_seq OWNED BY public.environment.env_id;
+
+
+--
+-- TOC entry 242 (class 1259 OID 274277)
+-- Name: fossil; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.fossil (
+    fossil_id integer NOT NULL,
+    fossil_name character varying NOT NULL,
+    pbdb_code integer,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    fossil_notes character varying(4000)
+);
+
+
+--
+-- TOC entry 3436 (class 0 OID 0)
+-- Dependencies: 242
+-- Name: TABLE fossil; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.fossil IS 'Fossil names and Paleobiology Database code. Note verbatim fossil information from context sheets is reported on the fossil_sample table, and may not be linked to formal fossil name until later date.';
+
+
+--
+-- TOC entry 3437 (class 0 OID 0)
+-- Dependencies: 242
+-- Name: COLUMN fossil.fossil_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.fossil.fossil_id IS 'PK. Unique identifier. Generated by database';
+
+
+--
+-- TOC entry 3438 (class 0 OID 0)
+-- Dependencies: 242
+-- Name: COLUMN fossil.fossil_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.fossil.fossil_name IS 'Fossil name - genus and species if possible, higher level taxonomy if not.';
+
+
+--
+-- TOC entry 3439 (class 0 OID 0)
+-- Dependencies: 242
+-- Name: COLUMN fossil.pbdb_code; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.fossil.pbdb_code IS 'Paleobiological Database identifier';
+
+
+--
+-- TOC entry 3440 (class 0 OID 0)
+-- Dependencies: 242
+-- Name: COLUMN fossil.fossil_notes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.fossil.fossil_notes IS 'Notes e.g. no PBDB identifier available';
+
+
+--
+-- TOC entry 267 (class 1259 OID 274417)
+-- Name: fossil_fossil_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.fossil_fossil_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3441 (class 0 OID 0)
+-- Dependencies: 267
+-- Name: fossil_fossil_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.fossil_fossil_id_seq OWNED BY public.fossil.fossil_id;
+
+
+--
+-- TOC entry 243 (class 1259 OID 274285)
+-- Name: fossil_sample; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.fossil_sample (
+    fossil_sample_id integer NOT NULL,
+    sample_id integer NOT NULL,
+    fossil_id integer,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    verbatim_fossil character varying(250)
+);
+
+
+--
+-- TOC entry 3442 (class 0 OID 0)
+-- Dependencies: 243
+-- Name: TABLE fossil_sample; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.fossil_sample IS 'Table linking samples to fossils, and recording the verbatim fossil name';
+
+
+--
+-- TOC entry 3443 (class 0 OID 0)
+-- Dependencies: 243
+-- Name: COLUMN fossil_sample.sample_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.fossil_sample.sample_id IS 'FK. ID of the sample. Links to the sample table.';
+
+
+--
+-- TOC entry 3444 (class 0 OID 0)
+-- Dependencies: 243
+-- Name: COLUMN fossil_sample.fossil_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.fossil_sample.fossil_id IS 'FK. ID of the fossil. Links to the fossil table.';
+
+
+--
+-- TOC entry 3445 (class 0 OID 0)
+-- Dependencies: 243
+-- Name: COLUMN fossil_sample.verbatim_fossil; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.fossil_sample.verbatim_fossil IS 'Verbatim fossil name';
+
+
+--
+-- TOC entry 268 (class 1259 OID 274419)
+-- Name: fossil_sample_fossil_sample_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.fossil_sample_fossil_sample_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3446 (class 0 OID 0)
+-- Dependencies: 268
+-- Name: fossil_sample_fossil_sample_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.fossil_sample_fossil_sample_id_seq OWNED BY public.fossil_sample.fossil_sample_id;
+
+
+--
+-- TOC entry 193 (class 1259 OID 273890)
+-- Name: geol_age; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.geol_age (
+    age_id integer NOT NULL,
+    ics_id integer,
+    verbatim_age character varying(50),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    age_notes character varying(4000),
+    age_modifier character varying(10)
+);
+
+
+--
+-- TOC entry 3447 (class 0 OID 0)
+-- Dependencies: 193
+-- Name: TABLE geol_age; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.geol_age IS 'Geological age - verbatim and International Commission on Stratigraphy (ICS) age';
+
+
+--
+-- TOC entry 3448 (class 0 OID 0)
+-- Dependencies: 193
+-- Name: COLUMN geol_age.age_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.geol_age.age_id IS 'PK. Unique identifier for the reported age. Generated by database';
+
+
+--
+-- TOC entry 3449 (class 0 OID 0)
+-- Dependencies: 193
+-- Name: COLUMN geol_age.ics_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.geol_age.ics_id IS 'FK. ID for the formal ICS age. Links to the dic_ics_age table, a dictionary of International Commission on Stratigraphy age names.';
+
+
+--
+-- TOC entry 3450 (class 0 OID 0)
+-- Dependencies: 193
+-- Name: COLUMN geol_age.verbatim_age; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.geol_age.verbatim_age IS 'Verbatim age as reported in publication, or by contributors.';
+
+
+--
+-- TOC entry 3451 (class 0 OID 0)
+-- Dependencies: 193
+-- Name: COLUMN geol_age.age_notes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.geol_age.age_notes IS 'Notes about how the age was determined.';
+
+
+--
+-- TOC entry 3452 (class 0 OID 0)
+-- Dependencies: 193
+-- Name: COLUMN geol_age.age_modifier; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.geol_age.age_modifier IS 'Upper, middle,lower - where not part of the official ICS name.';
+
+
+--
+-- TOC entry 269 (class 1259 OID 274431)
+-- Name: geol_age_age_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.geol_age_age_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3453 (class 0 OID 0)
+-- Dependencies: 269
+-- Name: geol_age_age_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.geol_age_age_id_seq OWNED BY public.geol_age.age_id;
+
+
+--
+-- TOC entry 194 (class 1259 OID 273898)
+-- Name: geol_context; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.geol_context (
+    geol_context_id integer NOT NULL,
+    env_id integer,
+    age_id integer,
+    geol_context_notes character varying(4000),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    lithostrat_id integer,
+    biostrat_id integer
+);
+
+
+--
+-- TOC entry 3454 (class 0 OID 0)
+-- Dependencies: 194
+-- Name: TABLE geol_context; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.geol_context IS 'Links lithostratigraphy, biostratigraphy, depositional environment and age data. Multiple samples from related site/project/paper often have the same combination of these four factors, and may use one geol_context_id.';
+
+
+--
+-- TOC entry 3455 (class 0 OID 0)
+-- Dependencies: 194
+-- Name: COLUMN geol_context.geol_context_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.geol_context.geol_context_id IS 'PK. Unique identifier. Generated by database';
+
+
+--
+-- TOC entry 3456 (class 0 OID 0)
+-- Dependencies: 194
+-- Name: COLUMN geol_context.env_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.geol_context.env_id IS 'FK. ID for the environment. Links to the environment table.';
+
+
+--
+-- TOC entry 3457 (class 0 OID 0)
+-- Dependencies: 194
+-- Name: COLUMN geol_context.age_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.geol_context.age_id IS 'FK. ID for the geological age. Links to the geol_age table.';
+
+
+--
+-- TOC entry 3458 (class 0 OID 0)
+-- Dependencies: 194
+-- Name: COLUMN geol_context.lithostrat_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.geol_context.lithostrat_id IS 'FK. ID for the lithostratigraphy. Links to the lithostrat table';
+
+
+--
+-- TOC entry 3459 (class 0 OID 0)
+-- Dependencies: 194
+-- Name: COLUMN geol_context.biostrat_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.geol_context.biostrat_id IS 'FK. ID for the biostratigraphy. Links to the biostrat table.';
+
+
+--
+-- TOC entry 270 (class 1259 OID 274433)
+-- Name: geol_context_geol_context_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.geol_context_geol_context_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3460 (class 0 OID 0)
+-- Dependencies: 270
+-- Name: geol_context_geol_context_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.geol_context_geol_context_id_seq OWNED BY public.geol_context.geol_context_id;
+
+
+--
+-- TOC entry 228 (class 1259 OID 274174)
+-- Name: geol_context_provided_by; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.geol_context_provided_by (
+    geol_context_id integer NOT NULL,
+    person_id integer NOT NULL,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3461 (class 0 OID 0)
+-- Dependencies: 228
+-- Name: TABLE geol_context_provided_by; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.geol_context_provided_by IS 'Linking table between geological context and person - more than one person can contribute to the geological context';
+
+
+--
+-- TOC entry 3462 (class 0 OID 0)
+-- Dependencies: 228
+-- Name: COLUMN geol_context_provided_by.geol_context_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.geol_context_provided_by.geol_context_id IS 'PK/FK. ID for the geological context. Links to the geol_context table. Part of composite primary key.';
+
+
+--
+-- TOC entry 3463 (class 0 OID 0)
+-- Dependencies: 228
+-- Name: COLUMN geol_context_provided_by.person_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.geol_context_provided_by.person_id IS 'PK/FK. ID for person who provided the details of the geological context. Links to the person table. Part of composite primary key.';
+
+
+--
+-- TOC entry 222 (class 1259 OID 274117)
+-- Name: institution; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.institution (
+    institution_id integer NOT NULL,
+    institution_name character varying(250) NOT NULL,
+    institution_type character varying(100),
+    institution_url character varying(1000),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    lat_dec numeric(12,10),
+    long_dec numeric(13,10),
+    country character varying(250),
+    institution_code character varying(100),
+    parent_institution integer,
+    institution_shorthand character varying(250)
+);
+
+
+--
+-- TOC entry 3464 (class 0 OID 0)
+-- Dependencies: 222
+-- Name: TABLE institution; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.institution IS 'Insitutions/organizations.';
+
+
+--
+-- TOC entry 3465 (class 0 OID 0)
+-- Dependencies: 222
+-- Name: COLUMN institution.institution_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.institution.institution_id IS 'PK. Unique identifier for the institution. Generated by database.';
+
+
+--
+-- TOC entry 3466 (class 0 OID 0)
+-- Dependencies: 222
+-- Name: COLUMN institution.institution_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.institution.institution_name IS 'Name of the institution.';
+
+
+--
+-- TOC entry 3467 (class 0 OID 0)
+-- Dependencies: 222
+-- Name: COLUMN institution.institution_url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.institution.institution_url IS 'Link to institution website.';
+
+
+--
+-- TOC entry 3468 (class 0 OID 0)
+-- Dependencies: 222
+-- Name: COLUMN institution.lat_dec; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.institution.lat_dec IS 'Decimal latitude of the institution. Cut and paste straight from google maps, no attempt made to determine uncertainty or control level of precision.';
+
+
+--
+-- TOC entry 3469 (class 0 OID 0)
+-- Dependencies: 222
+-- Name: COLUMN institution.long_dec; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.institution.long_dec IS 'Decimal longitude of the institution. Cut and paste straight from google maps, no attempt made to determine uncertainty or control level of precision.';
+
+
+--
+-- TOC entry 3470 (class 0 OID 0)
+-- Dependencies: 222
+-- Name: COLUMN institution.country; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.institution.country IS 'Country of the institution.';
+
+
+--
+-- TOC entry 3471 (class 0 OID 0)
+-- Dependencies: 222
+-- Name: COLUMN institution.institution_code; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.institution.institution_code IS 'Acronym or code of the institution e.g. NSF.';
+
+
+--
+-- TOC entry 3472 (class 0 OID 0)
+-- Dependencies: 222
+-- Name: COLUMN institution.parent_institution; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.institution.parent_institution IS 'ID of the parent institution. Self-reference, link to the institution table.';
+
+
+--
+-- TOC entry 271 (class 1259 OID 274440)
+-- Name: institution_inst_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.institution_inst_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3473 (class 0 OID 0)
+-- Dependencies: 271
+-- Name: institution_inst_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.institution_inst_id_seq OWNED BY public.institution.institution_id;
+
+
+--
+-- TOC entry 207 (class 1259 OID 273991)
+-- Name: interpreted_age; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.interpreted_age (
+    interpreted_age_id integer NOT NULL,
+    interpreted_age numeric(6,2) NOT NULL,
+    interpreted_age_notes character varying(4000),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    sample_id integer,
+    reference_id integer,
+    min_age numeric(6,2),
+    max_age numeric(6,2)
+);
+
+
+--
+-- TOC entry 3474 (class 0 OID 0)
+-- Dependencies: 207
+-- Name: TABLE interpreted_age; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.interpreted_age IS 'The interpreted age of the sample in millions of years, with justification.';
+
+
+--
+-- TOC entry 3475 (class 0 OID 0)
+-- Dependencies: 207
+-- Name: COLUMN interpreted_age.interpreted_age; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.interpreted_age.interpreted_age IS 'Interpreted age in Ma';
+
+
+--
+-- TOC entry 3476 (class 0 OID 0)
+-- Dependencies: 207
+-- Name: COLUMN interpreted_age.interpreted_age_notes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.interpreted_age.interpreted_age_notes IS 'Justification for assigned interpreted age';
+
+
+--
+-- TOC entry 3477 (class 0 OID 0)
+-- Dependencies: 207
+-- Name: COLUMN interpreted_age.sample_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.interpreted_age.sample_id IS 'FK. ID for the sample. Links to the sample table.';
+
+
+--
+-- TOC entry 272 (class 1259 OID 274442)
+-- Name: interpreted_age_interpreted_age_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.interpreted_age_interpreted_age_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3478 (class 0 OID 0)
+-- Dependencies: 272
+-- Name: interpreted_age_interpreted_age_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.interpreted_age_interpreted_age_id_seq OWNED BY public.interpreted_age.interpreted_age_id;
+
+
+--
+-- TOC entry 229 (class 1259 OID 274179)
+-- Name: interpreted_age_provided_by; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.interpreted_age_provided_by (
+    interpreted_age_id integer NOT NULL,
+    person_id integer NOT NULL,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3479 (class 0 OID 0)
+-- Dependencies: 229
+-- Name: TABLE interpreted_age_provided_by; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.interpreted_age_provided_by IS 'Linking table between interpreted_age and person - more than one person can contribute to the interpreted_age';
+
+
+--
+-- TOC entry 3480 (class 0 OID 0)
+-- Dependencies: 229
+-- Name: COLUMN interpreted_age_provided_by.interpreted_age_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.interpreted_age_provided_by.interpreted_age_id IS 'PK/FK. ID for the interpreted_age. Links to the interpreted_age table. Part of composite primary key.';
+
+
+--
+-- TOC entry 3481 (class 0 OID 0)
+-- Dependencies: 229
+-- Name: COLUMN interpreted_age_provided_by.person_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.interpreted_age_provided_by.person_id IS 'PK/FK. ID for the person who provided the interpreted age. Links to the person table. Part of composite primary key.';
+
+
+--
+-- TOC entry 208 (class 1259 OID 273999)
+-- Name: lithostrat; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.lithostrat (
+    strat_id integer,
+    lithostrat_desc character varying(4000),
+    verbatim_strat character varying(250),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    lithostrat_id integer NOT NULL,
+    strat_notes character varying(250)
+);
+
+
+--
+-- TOC entry 3482 (class 0 OID 0)
+-- Dependencies: 208
+-- Name: TABLE lithostrat; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.lithostrat IS 'Reported geological unit (e.g. group, formation or member) - verbatim and with reference to dic_lithostrat';
+
+
+--
+-- TOC entry 3483 (class 0 OID 0)
+-- Dependencies: 208
+-- Name: COLUMN lithostrat.strat_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lithostrat.strat_id IS 'FK. ID for the formal lithostratigraphical name. Links to the dic_lithostrat table.';
+
+
+--
+-- TOC entry 3484 (class 0 OID 0)
+-- Dependencies: 208
+-- Name: COLUMN lithostrat.lithostrat_desc; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lithostrat.lithostrat_desc IS 'General lithological description of the unit.';
+
+
+--
+-- TOC entry 3485 (class 0 OID 0)
+-- Dependencies: 208
+-- Name: COLUMN lithostrat.verbatim_strat; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lithostrat.verbatim_strat IS 'Verbatim lithostratigraphy e.g. upper middle Frankfort Shale.';
+
+
+--
+-- TOC entry 3486 (class 0 OID 0)
+-- Dependencies: 208
+-- Name: COLUMN lithostrat.lithostrat_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lithostrat.lithostrat_id IS 'PK. Unique identifier for the described geological unit. Generated by database.';
+
+
+--
+-- TOC entry 273 (class 1259 OID 274515)
+-- Name: lithostrat_strat_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.lithostrat_strat_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3487 (class 0 OID 0)
+-- Dependencies: 273
+-- Name: lithostrat_strat_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.lithostrat_strat_id_seq OWNED BY public.lithostrat.lithostrat_id;
+
+
+--
+-- TOC entry 230 (class 1259 OID 274184)
+-- Name: person; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.person (
+    person_id integer NOT NULL,
+    first_name character varying(50),
+    middle_initial character varying(50),
+    last_name character varying(50) NOT NULL,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    orcid_id character varying(255),
+    is_contributor boolean DEFAULT false,
+    contributor_notes character varying(1000)
+);
+
+
+--
+-- TOC entry 3488 (class 0 OID 0)
+-- Dependencies: 230
+-- Name: TABLE person; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.person IS 'A list of people - can be contributors, authors, collectors etc.';
+
+
+--
+-- TOC entry 3489 (class 0 OID 0)
+-- Dependencies: 230
+-- Name: COLUMN person.person_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.person.person_id IS 'PK. Unique identifier for a person. Generated by database.';
+
+
+--
+-- TOC entry 3490 (class 0 OID 0)
+-- Dependencies: 230
+-- Name: COLUMN person.first_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.person.first_name IS 'First name.';
+
+
+--
+-- TOC entry 3491 (class 0 OID 0)
+-- Dependencies: 230
+-- Name: COLUMN person.middle_initial; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.person.middle_initial IS 'Middle initial (with period).';
+
+
+--
+-- TOC entry 3492 (class 0 OID 0)
+-- Dependencies: 230
+-- Name: COLUMN person.last_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.person.last_name IS 'Last name.';
+
+
+--
+-- TOC entry 3493 (class 0 OID 0)
+-- Dependencies: 230
+-- Name: COLUMN person.orcid_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.person.orcid_id IS 'ORCID - See https://orcid.org/';
+
+
+--
+-- TOC entry 274 (class 1259 OID 274529)
+-- Name: person_person_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.person_person_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3494 (class 0 OID 0)
+-- Dependencies: 274
+-- Name: person_person_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.person_person_id_seq OWNED BY public.person.person_id;
+
+
+--
+-- TOC entry 209 (class 1259 OID 274007)
+-- Name: project; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.project (
+    project_id integer NOT NULL,
+    project_name character varying(100),
+    project_type character varying(255),
+    start_date date,
+    end_date date,
+    is_public boolean DEFAULT false,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    project_desc character varying(4000),
+    project_notes character varying(4000)
+);
+
+
+--
+-- TOC entry 3495 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: TABLE project; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.project IS 'Project is a way to link samples together. Each reference work is one project, other kinds of project include e.g. student summer projects, dissertations, field seasons, groups of related reference works etc.';
+
+
+--
+-- TOC entry 3496 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN project.project_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.project.project_id IS 'PK. Unique identifier for a project. Generated by database.';
+
+
+--
+-- TOC entry 3497 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN project.project_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.project.project_name IS 'Name of the project.';
+
+
+--
+-- TOC entry 3498 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN project.project_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.project.project_type IS 'Type of project - e.g. PhD, Published Paper, Summer Project, Lab Project';
+
+
+--
+-- TOC entry 3499 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN project.start_date; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.project.start_date IS 'Start date, ISO format. Often not available, usually only used for lab projects';
+
+
+--
+-- TOC entry 3500 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN project.end_date; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.project.end_date IS 'End date, ISO format. For a reference work, the date of publication/date available online is used.';
+
+
+--
+-- TOC entry 3501 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN project.is_public; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.project.is_public IS 'Whether the project data can be made public (false by default).';
+
+
+--
+-- TOC entry 3502 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN project.project_desc; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.project.project_desc IS 'Description of the project.';
+
+
+--
+-- TOC entry 277 (class 1259 OID 274562)
+-- Name: project_citation; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.project_citation (
+    project_id integer NOT NULL,
+    reference_id integer NOT NULL,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3503 (class 0 OID 0)
+-- Dependencies: 277
+-- Name: TABLE project_citation; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.project_citation IS 'Linking table for projects and reference works';
+
+
+--
+-- TOC entry 3504 (class 0 OID 0)
+-- Dependencies: 277
+-- Name: COLUMN project_citation.project_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.project_citation.project_id IS 'PK/FK. ID of the project. Links to the project table. Part of composite primary key.';
+
+
+--
+-- TOC entry 3505 (class 0 OID 0)
+-- Dependencies: 277
+-- Name: COLUMN project_citation.reference_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.project_citation.reference_id IS 'PK/FK. ID of the reference work. Links to reference_work table. Part of composite primary key.';
+
+
+--
+-- TOC entry 278 (class 1259 OID 274582)
+-- Name: project_project_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.project_project_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3506 (class 0 OID 0)
+-- Dependencies: 278
+-- Name: project_project_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.project_project_id_seq OWNED BY public.project.project_id;
+
+
+--
+-- TOC entry 210 (class 1259 OID 274016)
+-- Name: project_sample; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.project_sample (
+    project_id integer NOT NULL,
+    sample_id integer NOT NULL,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- TOC entry 3507 (class 0 OID 0)
+-- Dependencies: 210
+-- Name: TABLE project_sample; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.project_sample IS 'Links projects with samples.';
+
+
+--
+-- TOC entry 3508 (class 0 OID 0)
+-- Dependencies: 210
+-- Name: COLUMN project_sample.project_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.project_sample.project_id IS 'PK/FK. ID of the project. Links to the project table.';
+
+
+--
+-- TOC entry 3509 (class 0 OID 0)
+-- Dependencies: 210
+-- Name: COLUMN project_sample.sample_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.project_sample.sample_id IS 'PK/FK. ID of the sample. Links to the sample table';
+
+
+--
+-- TOC entry 244 (class 1259 OID 274290)
+-- Name: proxy_published; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.proxy_published (
+    proxy_pub_id integer NOT NULL,
+    proxy_id integer NOT NULL,
+    proxy_pub_value numeric(10,2) NOT NULL,
+    sample_id integer NOT NULL,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    proxy_pub_notes character varying(4000),
+    reference_id integer,
+    citation_notes character varying(4000)
+);
+
+
+--
+-- TOC entry 3510 (class 0 OID 0)
+-- Dependencies: 244
+-- Name: TABLE proxy_published; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.proxy_published IS 'Published "proxy" results - results that are calculated using original measured data.';
+
+
+--
+-- TOC entry 3511 (class 0 OID 0)
+-- Dependencies: 244
+-- Name: COLUMN proxy_published.proxy_pub_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.proxy_published.proxy_pub_id IS 'PK. Unique identifier for published proxy. Generated by database.';
+
+
+--
+-- TOC entry 3512 (class 0 OID 0)
+-- Dependencies: 244
+-- Name: COLUMN proxy_published.proxy_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.proxy_published.proxy_id IS 'FK. ID for the proxy. Links to the dic_proxy table.';
+
+
+--
+-- TOC entry 3513 (class 0 OID 0)
+-- Dependencies: 244
+-- Name: COLUMN proxy_published.proxy_pub_value; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.proxy_published.proxy_pub_value IS 'Published proxy value.';
+
+
+--
+-- TOC entry 3514 (class 0 OID 0)
+-- Dependencies: 244
+-- Name: COLUMN proxy_published.sample_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.proxy_published.sample_id IS 'FK. ID for the sample. Links to the sample table.';
+
+
+--
+-- TOC entry 3515 (class 0 OID 0)
+-- Dependencies: 244
+-- Name: COLUMN proxy_published.proxy_pub_notes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.proxy_published.proxy_pub_notes IS 'Notes directly relevent to the proxy or the published value';
+
+
+--
+-- TOC entry 3516 (class 0 OID 0)
+-- Dependencies: 244
+-- Name: COLUMN proxy_published.reference_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.proxy_published.reference_id IS 'FK. Identifier for the reference work where the proxy was published.';
+
+
+--
+-- TOC entry 3517 (class 0 OID 0)
+-- Dependencies: 244
+-- Name: COLUMN proxy_published.citation_notes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.proxy_published.citation_notes IS 'Notes relevant to the reference work where the proxy was published, e.g. Published in Canfield et al. 2008 only, although original data is from Canfield et al. 2007.';
+
+
+--
+-- TOC entry 279 (class 1259 OID 274589)
+-- Name: proxy_published_proxy_pub_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.proxy_published_proxy_pub_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3518 (class 0 OID 0)
+-- Dependencies: 279
+-- Name: proxy_published_proxy_pub_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.proxy_published_proxy_pub_id_seq OWNED BY public.proxy_published.proxy_pub_id;
+
+
+--
+-- TOC entry 275 (class 1259 OID 274536)
+-- Name: reference_work_reference_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.reference_work_reference_id_seq
+    START WITH 6
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 276 (class 1259 OID 274538)
+-- Name: reference_work; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.reference_work (
+    reference_id integer DEFAULT nextval('public.reference_work_reference_id_seq'::regclass) NOT NULL,
+    is_published boolean NOT NULL,
+    pub_year character varying(25),
+    title character varying(1000),
+    pages character varying(50),
+    volume character varying(10),
+    reference_type character varying(100) NOT NULL,
+    url character varying(1000),
+    doi character varying(4000),
+    reference_notes character varying(4000),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    book_title character varying(1000),
+    journal_id integer,
+    article_num character varying(100)
+);
+
+
+--
+-- TOC entry 3519 (class 0 OID 0)
+-- Dependencies: 276
+-- Name: TABLE reference_work; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.reference_work IS 'Reference work, may be published or unpublished.';
+
+
+--
+-- TOC entry 3520 (class 0 OID 0)
+-- Dependencies: 276
+-- Name: COLUMN reference_work.reference_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.reference_work.reference_id IS 'PK. Unique identifier for reference work. Generated by database.';
+
+
+--
+-- TOC entry 3521 (class 0 OID 0)
+-- Dependencies: 276
+-- Name: COLUMN reference_work.is_published; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.reference_work.is_published IS 'Notes if reference work has been published.';
+
+
+--
+-- TOC entry 3522 (class 0 OID 0)
+-- Dependencies: 276
+-- Name: COLUMN reference_work.pub_year; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.reference_work.pub_year IS 'Year of publication.';
+
+
+--
+-- TOC entry 3523 (class 0 OID 0)
+-- Dependencies: 276
+-- Name: COLUMN reference_work.title; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.reference_work.title IS 'Title of reference work.';
+
+
+--
+-- TOC entry 3524 (class 0 OID 0)
+-- Dependencies: 276
+-- Name: COLUMN reference_work.pages; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.reference_work.pages IS 'Page numbers of reference work.';
+
+
+--
+-- TOC entry 3525 (class 0 OID 0)
+-- Dependencies: 276
+-- Name: COLUMN reference_work.volume; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.reference_work.volume IS 'Volume number of reference work.';
+
+
+--
+-- TOC entry 3526 (class 0 OID 0)
+-- Dependencies: 276
+-- Name: COLUMN reference_work.reference_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.reference_work.reference_type IS 'Type of reference work e.g. Journal article, PhD dissertation.';
+
+
+--
+-- TOC entry 3527 (class 0 OID 0)
+-- Dependencies: 276
+-- Name: COLUMN reference_work.url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.reference_work.url IS 'Link to reference work.';
+
+
+--
+-- TOC entry 3528 (class 0 OID 0)
+-- Dependencies: 276
+-- Name: COLUMN reference_work.doi; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.reference_work.doi IS 'Digital object identifier.';
+
+
+--
+-- TOC entry 3529 (class 0 OID 0)
+-- Dependencies: 276
+-- Name: COLUMN reference_work.book_title; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.reference_work.book_title IS 'Title of book.';
+
+
+--
+-- TOC entry 3530 (class 0 OID 0)
+-- Dependencies: 276
+-- Name: COLUMN reference_work.journal_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.reference_work.journal_id IS 'FK. ID for the journal. Links to the dic_journal table.';
+
+
+--
+-- TOC entry 191 (class 1259 OID 273867)
+-- Name: sample; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sample (
+    sample_id integer NOT NULL,
+    igsn character varying(25),
+    original_num character varying(250),
+    height_depth_m numeric(7,2),
+    geol_context_id integer,
+    storage_id integer,
+    coll_event_id integer,
+    is_standard boolean DEFAULT false,
+    sample_notes character varying(4000),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    uuid uuid DEFAULT public.gen_random_uuid(),
+    lith_id integer,
+    color_id integer,
+    lith_texture_id integer,
+    lith_composition_id integer,
+    is_bioturbated boolean,
+    visible_py_ox boolean,
+    ichnofabric_index character varying(50),
+    weath_grade character varying(5),
+    lith_notes character varying(4000),
+    min_depth numeric(8,3),
+    max_depth numeric(8,3),
+    parent_igsn character varying(25),
+    verbatim_lith character varying(4000),
+    composite_height_m numeric(9,2),
+    munsell_code character varying,
+    usgs_job_id character varying,
+    submitted_date date
+);
+
+
+--
+-- TOC entry 3531 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: TABLE sample; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.sample IS 'Samples collected for analysis.';
+
+
+--
+-- TOC entry 3532 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.sample_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.sample_id IS 'PK. Unique identifier for a sample. Generated by database';
+
+
+--
+-- TOC entry 3533 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.igsn; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.igsn IS 'International Geo Sample Number, see geosamples.org/igsnabout.';
+
+
+--
+-- TOC entry 3534 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.original_num; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.original_num IS 'Original reported/published sample number. Note that the original_num is not necessarily unique.';
+
+
+--
+-- TOC entry 3535 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.height_depth_m; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.height_depth_m IS 'Height or depth in meters in the measured section or core.';
+
+
+--
+-- TOC entry 3536 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.geol_context_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.geol_context_id IS 'FK. ID for the geological context. Links to the geol_context table.';
+
+
+--
+-- TOC entry 3537 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.storage_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.storage_id IS 'FK. ID for the sample storage location. Links to the storage table.';
+
+
+--
+-- TOC entry 3538 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.coll_event_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.coll_event_id IS 'FK. ID for the collecting event. Links to the collecting_event table.';
+
+
+--
+-- TOC entry 3539 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.is_standard; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.is_standard IS 'Whether a sample is used as a standard in geochemical analyses.';
+
+
+--
+-- TOC entry 3540 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.sample_notes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.sample_notes IS 'Notes about the sample.';
+
+
+--
+-- TOC entry 3541 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.uuid; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.uuid IS 'Randomly generated unique identifier.';
+
+
+--
+-- TOC entry 3542 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.lith_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.lith_id IS 'FK. Reference to dic_lithology, a dictionary of lithology types e.g. shale, mudstone etc.';
+
+
+--
+-- TOC entry 3543 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.color_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.color_id IS 'FK. Reference to color table.';
+
+
+--
+-- TOC entry 3544 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.lith_texture_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.lith_texture_id IS 'FK. ID for the lithology texture. Links to dic_lith_texture.';
+
+
+--
+-- TOC entry 3545 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.lith_composition_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.lith_composition_id IS 'FK. ID for the lithology composition. Links to the dic_lith_composition table.';
+
+
+--
+-- TOC entry 3546 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.is_bioturbated; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.is_bioturbated IS 'Whether the sediment is bioturbated.';
+
+
+--
+-- TOC entry 3547 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.visible_py_ox; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.visible_py_ox IS 'Notes whether visible pyrite oxidation was noted in the field.';
+
+
+--
+-- TOC entry 3548 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.ichnofabric_index; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.ichnofabric_index IS 'Records the ichnofabric index - generally a scale from 1-6 (see Droser and Bottjer 1986).';
+
+
+--
+-- TOC entry 3549 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.weath_grade; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.weath_grade IS 'FK. ID for weathering grade. Links to the dic_weathering table.';
+
+
+--
+-- TOC entry 3550 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.lith_notes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.lith_notes IS 'Notes about the lithology';
+
+
+--
+-- TOC entry 3551 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.min_depth; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.min_depth IS 'Minimum depth of sample collection, where a range is specified.';
+
+
+--
+-- TOC entry 3552 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.max_depth; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.max_depth IS 'Maximum depth of sample collection, where a range is specified.';
+
+
+--
+-- TOC entry 3553 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.parent_igsn; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.parent_igsn IS 'IGSN for parent sample - e.g. the IGSN for a core as a whole.';
+
+
+--
+-- TOC entry 3554 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.verbatim_lith; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.verbatim_lith IS 'Verbatim lithology description, in particular where specified in a published table.';
+
+
+--
+-- TOC entry 3555 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.composite_height_m; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.composite_height_m IS 'Composite height/depth in meters, i.e. where multiple sections are put together as one larger section';
+
+
+--
+-- TOC entry 3556 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.munsell_code; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.munsell_code IS 'Code for color from Munsell Rock Color Chart';
+
+
+--
+-- TOC entry 3557 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.usgs_job_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.usgs_job_id IS 'From USGS database: Job ID; Laboratory batch identifier assigned by the Sample Control Officer of the analytical laboratory that received the samples as a batch.';
+
+
+--
+-- TOC entry 3558 (class 0 OID 0)
+-- Dependencies: 191
+-- Name: COLUMN sample.submitted_date; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample.submitted_date IS 'To accomodate data from USGS database: Date submitted; Date sample was submitted to Sample Control for initial database processing prior to sample prep and analysis.';
+
+
+--
+-- TOC entry 231 (class 1259 OID 274193)
+-- Name: sample_provided_by; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sample_provided_by (
+    sample_id integer NOT NULL,
+    person_id integer NOT NULL,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3559 (class 0 OID 0)
+-- Dependencies: 231
+-- Name: TABLE sample_provided_by; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.sample_provided_by IS 'Linking table between sample and person - more than one person can contribute to the description of the sample';
+
+
+--
+-- TOC entry 3560 (class 0 OID 0)
+-- Dependencies: 231
+-- Name: COLUMN sample_provided_by.sample_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample_provided_by.sample_id IS 'PK/FK. ID for the sample. Links to the sample table. Part of composite primary key.';
+
+
+--
+-- TOC entry 3561 (class 0 OID 0)
+-- Dependencies: 231
+-- Name: COLUMN sample_provided_by.person_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sample_provided_by.person_id IS 'PK/FK. ID for the person who provided the details of the sample (e.g. lithology, color). Links to the sample table. Part of composite primary key.';
+
+
+--
+-- TOC entry 280 (class 1259 OID 274617)
+-- Name: sample_sample_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.sample_sample_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3562 (class 0 OID 0)
+-- Dependencies: 280
+-- Name: sample_sample_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.sample_sample_id_seq OWNED BY public.sample.sample_id;
+
+
+--
+-- TOC entry 245 (class 1259 OID 274298)
+-- Name: sed_structure_sample; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sed_structure_sample (
+    sample_id integer NOT NULL,
+    sed_structure_id integer NOT NULL,
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- TOC entry 3563 (class 0 OID 0)
+-- Dependencies: 245
+-- Name: TABLE sed_structure_sample; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.sed_structure_sample IS 'Linking table for samples and sedimentary structures';
+
+
+--
+-- TOC entry 3564 (class 0 OID 0)
+-- Dependencies: 245
+-- Name: COLUMN sed_structure_sample.sample_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sed_structure_sample.sample_id IS 'PK/FK. ID for the sample. Links to the sample table. Part of composite primary key';
+
+
+--
+-- TOC entry 3565 (class 0 OID 0)
+-- Dependencies: 245
+-- Name: COLUMN sed_structure_sample.sed_structure_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sed_structure_sample.sed_structure_id IS 'PK/FK. ID for the sedimentary structure. Links to the sed_structure table. Part of composite primary key';
+
+
+--
+-- TOC entry 211 (class 1259 OID 274021)
+-- Name: site; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.site (
+    site_id integer NOT NULL,
+    section_name character varying(255),
+    site_type character varying(50),
+    country character varying,
+    site_desc character varying(4000),
+    lat_dec numeric(12,10),
+    long_dec numeric(13,10),
+    datum_original character varying(50),
+    lat_original character varying(50),
+    long_original character varying(50),
+    georef_det_date date,
+    georef_protocol character varying(255),
+    uncertainty_in_meters numeric(10,2),
+    craton_terrane_id integer,
+    basin_id integer,
+    site_notes character varying(4000),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    water_depth_m numeric(8,3),
+    sed_rate character varying(225),
+    elevation_m numeric(6,2),
+    metamorphic_bin integer,
+    metamorphic_notes character varying(4000),
+    state_province character varying,
+    county character varying,
+    regional_geology_notes character varying(4000),
+    datum character varying(50),
+    CONSTRAINT metachk CHECK ((metamorphic_bin = ANY (ARRAY[1, 2, 3])))
+);
+
+
+--
+-- TOC entry 3566 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: TABLE site; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.site IS 'Sites of sample collection';
+
+
+--
+-- TOC entry 3567 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.site_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.site_id IS 'PK. Unique identifier for a site. Generated by database';
+
+
+--
+-- TOC entry 3568 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.section_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.section_name IS 'Section name, or site name.';
+
+
+--
+-- TOC entry 3569 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.site_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.site_type IS 'Site type: outcrop, core, cutting, modern, modern_freshwater, modern_marine';
+
+
+--
+-- TOC entry 3570 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.country; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.country IS 'FK. Country name from the dic_country table, a dictionary of higher countries and seas, and their ISO codes.';
+
+
+--
+-- TOC entry 3571 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.site_desc; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.site_desc IS 'Description of the site, e.g. 4 km southeast of the Dazhuliushui mine site.';
+
+
+--
+-- TOC entry 3572 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.lat_dec; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.lat_dec IS 'Latitude in decimal degrees.';
+
+
+--
+-- TOC entry 3573 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.long_dec; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.long_dec IS 'Longitude in decimal degrees.';
+
+
+--
+-- TOC entry 3574 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.datum_original; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.datum_original IS 'Geodetic datum for the original latitude and longitude measurement e.g. NAD27, WGS84.';
+
+
+--
+-- TOC entry 3575 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.lat_original; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.lat_original IS 'Latitude as reported in original publication or field notes, or provided by the collector.';
+
+
+--
+-- TOC entry 3576 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.long_original; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.long_original IS 'Latitude as reported in original publication or field notes, or provided by the collector.';
+
+
+--
+-- TOC entry 3577 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.georef_det_date; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.georef_det_date IS 'Date georeferenced, used if no original lat-long provided.';
+
+
+--
+-- TOC entry 3578 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.georef_protocol; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.georef_protocol IS 'Georeferencing protocol e.g. Georeferencing Quick Reference Guide Version 2012-10-08.';
+
+
+--
+-- TOC entry 3579 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.uncertainty_in_meters; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.uncertainty_in_meters IS 'Radius of uncertainty in meters - takes into account the locality description, map scale, datum, precision and accuracy of the sources used to determine coordinates - see Quick Reference Guide, Wieczorek et al. 2004.';
+
+
+--
+-- TOC entry 3580 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.craton_terrane_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.craton_terrane_id IS 'FK. ID for the craton or terrane. Links to the craton_terrane table.';
+
+
+--
+-- TOC entry 3581 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.basin_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.basin_id IS 'FK. ID for the sedimentary basin. Links to the basin table.';
+
+
+--
+-- TOC entry 3582 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.site_notes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.site_notes IS 'Notes about the site, not part of the description - e.g. source of lat-long, where the site is illustrated.';
+
+
+--
+-- TOC entry 3583 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.water_depth_m; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.water_depth_m IS 'Water depth in meters, for modern sediment collections.';
+
+
+--
+-- TOC entry 3584 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.sed_rate; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.sed_rate IS 'Sedimentation rate, for modern sediment collections. Varchar to accomodate very variable modes of reporting, including ranges.';
+
+
+--
+-- TOC entry 3585 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.elevation_m; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.elevation_m IS 'Elevation in meters.';
+
+
+--
+-- TOC entry 3586 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.metamorphic_bin; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.metamorphic_bin IS 'FK. ID for the low temperature metamorphic bin. Links to the dic_meta table table.';
+
+
+--
+-- TOC entry 3587 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.metamorphic_notes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.metamorphic_notes IS 'Notes about how the metamorphic bin was determined';
+
+
+--
+-- TOC entry 3588 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.state_province; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.state_province IS 'State or province';
+
+
+--
+-- TOC entry 3589 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.county; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.county IS 'County or equivalent';
+
+
+--
+-- TOC entry 3590 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.regional_geology_notes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.regional_geology_notes IS 'Notes about the regional geology. Added to accomodate data from USGS databases';
+
+
+--
+-- TOC entry 3591 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN site.datum; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site.datum IS 'Datum of the decimal latitude and longitude, where known. May differ from datum_original - in some cases, for example, lat-long has been converted to WGS84.';
+
+
+--
+-- TOC entry 281 (class 1259 OID 274649)
+-- Name: site_site_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.site_site_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3592 (class 0 OID 0)
+-- Dependencies: 281
+-- Name: site_site_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.site_site_id_seq OWNED BY public.site.site_id;
+
+
+--
+-- TOC entry 282 (class 1259 OID 274684)
+-- Name: storage; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.storage (
+    storage_id integer NOT NULL,
+    institution_id integer,
+    building character varying(100),
+    room character varying(50),
+    cabinet character varying(50),
+    shelf_drawer character varying(50),
+    timestamp_created timestamp with time zone DEFAULT now() NOT NULL,
+    timestamp_modified timestamp with time zone DEFAULT now(),
+    contact_person integer,
+    storage_notes character varying(1000)
+);
+
+
+--
+-- TOC entry 3593 (class 0 OID 0)
+-- Dependencies: 282
+-- Name: TABLE storage; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.storage IS 'Where the samples are stored';
+
+
+--
+-- TOC entry 3594 (class 0 OID 0)
+-- Dependencies: 282
+-- Name: COLUMN storage.storage_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.storage.storage_id IS 'PK. Unique identifier for each storage location. Generated by database.';
+
+
+--
+-- TOC entry 3595 (class 0 OID 0)
+-- Dependencies: 282
+-- Name: COLUMN storage.institution_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.storage.institution_id IS 'FK. ID for the institution where the sample is stored. Links to the institution table.';
+
+
+--
+-- TOC entry 3596 (class 0 OID 0)
+-- Dependencies: 282
+-- Name: COLUMN storage.building; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.storage.building IS 'Building where the sample is stored.';
+
+
+--
+-- TOC entry 3597 (class 0 OID 0)
+-- Dependencies: 282
+-- Name: COLUMN storage.room; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.storage.room IS 'Room where the sample is stored.';
+
+
+--
+-- TOC entry 3598 (class 0 OID 0)
+-- Dependencies: 282
+-- Name: COLUMN storage.cabinet; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.storage.cabinet IS 'Cabinet where the sample is stored.';
+
+
+--
+-- TOC entry 3599 (class 0 OID 0)
+-- Dependencies: 282
+-- Name: COLUMN storage.shelf_drawer; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.storage.shelf_drawer IS 'Shelf or drawer where sample is stored.';
+
+
+--
+-- TOC entry 283 (class 1259 OID 274692)
+-- Name: storage_storage_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.storage_storage_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3600 (class 0 OID 0)
+-- Dependencies: 283
+-- Name: storage_storage_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.storage_storage_id_seq OWNED BY public.storage.storage_id;
+
+
+--
+-- TOC entry 2653 (class 2604 OID 274773)
+-- Name: affiliation affiliation_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.affiliation ALTER COLUMN affiliation_id SET DEFAULT nextval('public.affiliation_affiliation_id_seq'::regclass);
+
+
+--
+-- TOC entry 2656 (class 2604 OID 274774)
+-- Name: analysis analysis_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analysis ALTER COLUMN analysis_id SET DEFAULT nextval('public.analysis_analysis_id_seq'::regclass);
+
+
+--
+-- TOC entry 2665 (class 2604 OID 274775)
+-- Name: analyte_determination analyte_det_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analyte_determination ALTER COLUMN analyte_det_id SET DEFAULT nextval('public.analyte_determination_analyte_det_id_seq'::regclass);
+
+
+--
+-- TOC entry 2670 (class 2604 OID 274776)
+-- Name: analyte_determination_limits limit_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analyte_determination_limits ALTER COLUMN limit_id SET DEFAULT nextval('public.analyte_determination_limits_limit_id_seq'::regclass);
+
+
+--
+-- TOC entry 2736 (class 2604 OID 274777)
+-- Name: author author_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.author ALTER COLUMN author_id SET DEFAULT nextval('public.author_author_id_seq'::regclass);
+
+
+--
+-- TOC entry 2686 (class 2604 OID 274778)
+-- Name: basin basin_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.basin ALTER COLUMN basin_id SET DEFAULT nextval('public.basin_basin_id_seq'::regclass);
+
+
+--
+-- TOC entry 2739 (class 2604 OID 274779)
+-- Name: batch batch_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.batch ALTER COLUMN batch_id SET DEFAULT nextval('public.batch_batch_id_seq'::regclass);
+
+
+--
+-- TOC entry 2756 (class 2604 OID 274780)
+-- Name: biostrat biostrat_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.biostrat ALTER COLUMN biostrat_id SET DEFAULT nextval('public.biostrat_biostrat_id_seq'::regclass);
+
+
+--
+-- TOC entry 2689 (class 2604 OID 274781)
+-- Name: collecting_event coll_event_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.collecting_event ALTER COLUMN coll_event_id SET DEFAULT nextval('public.collecting_event_coll_event_id_seq'::regclass);
+
+
+--
+-- TOC entry 2769 (class 2604 OID 274782)
+-- Name: collector collector_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.collector ALTER COLUMN collector_id SET DEFAULT nextval('public.collector_collector_id_seq'::regclass);
+
+
+--
+-- TOC entry 2692 (class 2604 OID 274783)
+-- Name: craton_terrane craton_terrane_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.craton_terrane ALTER COLUMN craton_terrane_id SET DEFAULT nextval('public.craton_terrane_craton_terrane_id_seq'::regclass);
+
+
+--
+-- TOC entry 2772 (class 2604 OID 274784)
+-- Name: data_source data_source_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_source ALTER COLUMN data_source_id SET DEFAULT nextval('public.dic_data_source_data_source_id_seq'::regclass);
+
+
+--
+-- TOC entry 2742 (class 2604 OID 274785)
+-- Name: dic_ana_method ana_method_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_ana_method ALTER COLUMN ana_method_id SET DEFAULT nextval('public.dic_analysis_method_method_id_seq'::regclass);
+
+
+--
+-- TOC entry 2695 (class 2604 OID 274786)
+-- Name: dic_basin_type basin_type_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_basin_type ALTER COLUMN basin_type_id SET DEFAULT nextval('public.dic_basin_type_basin_type_id_seq'::regclass);
+
+
+--
+-- TOC entry 2793 (class 2604 OID 274787)
+-- Name: dic_biostrat dic_biostrat_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_biostrat ALTER COLUMN dic_biostrat_id SET DEFAULT nextval('public.dic_biostrat_dic_biostrat_id_seq'::regclass);
+
+
+--
+-- TOC entry 2698 (class 2604 OID 274788)
+-- Name: dic_color color_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_color ALTER COLUMN color_id SET DEFAULT nextval('public.color_color_id_seq'::regclass);
+
+
+--
+-- TOC entry 2745 (class 2604 OID 274789)
+-- Name: dic_exp_method exp_method_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_exp_method ALTER COLUMN exp_method_id SET DEFAULT nextval('public.dic_exp_method_exp_method_id_seq'::regclass);
+
+
+--
+-- TOC entry 2701 (class 2604 OID 274790)
+-- Name: dic_lith_composition lith_composition_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_lith_composition ALTER COLUMN lith_composition_id SET DEFAULT nextval('public.dic_lith_comp_lith_comp_id_seq'::regclass);
+
+
+--
+-- TOC entry 2704 (class 2604 OID 274791)
+-- Name: dic_lith_texture lith_texture_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_lith_texture ALTER COLUMN lith_texture_id SET DEFAULT nextval('public.dic_lith_texture_lith_texture_id_seq'::regclass);
+
+
+--
+-- TOC entry 2707 (class 2604 OID 274792)
+-- Name: dic_lithology lith_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_lithology ALTER COLUMN lith_id SET DEFAULT nextval('public.dic_lithology_lith_id_seq'::regclass);
+
+
+--
+-- TOC entry 2711 (class 2604 OID 274793)
+-- Name: dic_meta meta_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_meta ALTER COLUMN meta_id SET DEFAULT nextval('public.dic_meta_meta_id_seq'::regclass);
+
+
+--
+-- TOC entry 2748 (class 2604 OID 274794)
+-- Name: dic_prep_method prep_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_prep_method ALTER COLUMN prep_id SET DEFAULT nextval('public.dic_analysis_prep_prep_id_seq'::regclass);
+
+
+--
+-- TOC entry 2800 (class 2604 OID 274795)
+-- Name: dic_proxy proxy_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_proxy ALTER COLUMN proxy_id SET DEFAULT nextval('public.dic_proxy_proxy_id_seq'::regclass);
+
+
+--
+-- TOC entry 2803 (class 2604 OID 274796)
+-- Name: dic_publication publication_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_publication ALTER COLUMN publication_id SET DEFAULT nextval('public.dic_publication_publication_id_seq'::regclass);
+
+
+--
+-- TOC entry 2714 (class 2604 OID 274797)
+-- Name: environment env_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.environment ALTER COLUMN env_id SET DEFAULT nextval('public.environment_env_id_seq'::regclass);
+
+
+--
+-- TOC entry 2780 (class 2604 OID 274798)
+-- Name: fossil fossil_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fossil ALTER COLUMN fossil_id SET DEFAULT nextval('public.fossil_fossil_id_seq'::regclass);
+
+
+--
+-- TOC entry 2783 (class 2604 OID 274799)
+-- Name: fossil_sample fossil_sample_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fossil_sample ALTER COLUMN fossil_sample_id SET DEFAULT nextval('public.fossil_sample_fossil_sample_id_seq'::regclass);
+
+
+--
+-- TOC entry 2680 (class 2604 OID 274801)
+-- Name: geol_age age_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.geol_age ALTER COLUMN age_id SET DEFAULT nextval('public.geol_age_age_id_seq'::regclass);
+
+
+--
+-- TOC entry 2683 (class 2604 OID 274802)
+-- Name: geol_context geol_context_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.geol_context ALTER COLUMN geol_context_id SET DEFAULT nextval('public.geol_context_geol_context_id_seq'::regclass);
+
+
+--
+-- TOC entry 2751 (class 2604 OID 274803)
+-- Name: institution institution_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.institution ALTER COLUMN institution_id SET DEFAULT nextval('public.institution_inst_id_seq'::regclass);
+
+
+--
+-- TOC entry 2718 (class 2604 OID 274804)
+-- Name: interpreted_age interpreted_age_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.interpreted_age ALTER COLUMN interpreted_age_id SET DEFAULT nextval('public.interpreted_age_interpreted_age_id_seq'::regclass);
+
+
+--
+-- TOC entry 2721 (class 2604 OID 274805)
+-- Name: lithostrat lithostrat_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.lithostrat ALTER COLUMN lithostrat_id SET DEFAULT nextval('public.lithostrat_strat_id_seq'::regclass);
+
+
+--
+-- TOC entry 2764 (class 2604 OID 274806)
+-- Name: person person_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.person ALTER COLUMN person_id SET DEFAULT nextval('public.person_person_id_seq'::regclass);
+
+
+--
+-- TOC entry 2725 (class 2604 OID 274807)
+-- Name: project project_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project ALTER COLUMN project_id SET DEFAULT nextval('public.project_project_id_seq'::regclass);
+
+
+--
+-- TOC entry 2786 (class 2604 OID 274808)
+-- Name: proxy_published proxy_pub_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.proxy_published ALTER COLUMN proxy_pub_id SET DEFAULT nextval('public.proxy_published_proxy_pub_id_seq'::regclass);
+
+
+--
+-- TOC entry 2675 (class 2604 OID 274809)
+-- Name: sample sample_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sample ALTER COLUMN sample_id SET DEFAULT nextval('public.sample_sample_id_seq'::regclass);
+
+
+--
+-- TOC entry 2730 (class 2604 OID 274810)
+-- Name: site site_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.site ALTER COLUMN site_id SET DEFAULT nextval('public.site_site_id_seq'::regclass);
+
+
+--
+-- TOC entry 2813 (class 2604 OID 274811)
+-- Name: storage storage_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.storage ALTER COLUMN storage_id SET DEFAULT nextval('public.storage_storage_id_seq'::regclass);
+
+
+--
+-- TOC entry 2817 (class 2606 OID 274945)
+-- Name: affiliation affiliation_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.affiliation
+    ADD CONSTRAINT affiliation_pkey PRIMARY KEY (affiliation_id);
+
+
+--
+-- TOC entry 2908 (class 2606 OID 274947)
+-- Name: alternate_num alternate_num_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.alternate_num
+    ADD CONSTRAINT alternate_num_id PRIMARY KEY (sample_id, alternate_num);
+
+
+--
+-- TOC entry 2821 (class 2606 OID 274949)
+-- Name: analysis analysis_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analysis
+    ADD CONSTRAINT analysis_id PRIMARY KEY (analysis_id);
+
+
+--
+-- TOC entry 2920 (class 2606 OID 274951)
+-- Name: dic_ana_method analysis_method_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_ana_method
+    ADD CONSTRAINT analysis_method_id PRIMARY KEY (ana_method_id);
+
+
+--
+-- TOC entry 2970 (class 2606 OID 274953)
+-- Name: dic_analyte analyte_code; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_analyte
+    ADD CONSTRAINT analyte_code PRIMARY KEY (analyte_code);
+
+
+--
+-- TOC entry 2824 (class 2606 OID 274955)
+-- Name: analyte_determination analyte_det_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analyte_determination
+    ADD CONSTRAINT analyte_det_id PRIMARY KEY (analyte_det_id);
+
+
+--
+-- TOC entry 2910 (class 2606 OID 274957)
+-- Name: author author_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.author
+    ADD CONSTRAINT author_id PRIMARY KEY (author_id);
+
+
+--
+-- TOC entry 2913 (class 2606 OID 274959)
+-- Name: author author_reference_id_author_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.author
+    ADD CONSTRAINT author_reference_id_author_id_key UNIQUE (reference_id, author_id);
+
+
+--
+-- TOC entry 2915 (class 2606 OID 274961)
+-- Name: author author_reference_id_author_position_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.author
+    ADD CONSTRAINT author_reference_id_author_position_key UNIQUE (reference_id, author_position);
+
+
+--
+-- TOC entry 2853 (class 2606 OID 274963)
+-- Name: basin basin_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.basin
+    ADD CONSTRAINT basin_id PRIMARY KEY (basin_id);
+
+
+--
+-- TOC entry 2861 (class 2606 OID 274965)
+-- Name: dic_basin_type basin_type_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_basin_type
+    ADD CONSTRAINT basin_type_id PRIMARY KEY (basin_type_id);
+
+
+--
+-- TOC entry 2918 (class 2606 OID 274967)
+-- Name: batch batch_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.batch
+    ADD CONSTRAINT batch_id PRIMARY KEY (batch_id);
+
+
+--
+-- TOC entry 2931 (class 2606 OID 274969)
+-- Name: batch_sample batch_sample_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.batch_sample
+    ADD CONSTRAINT batch_sample_id PRIMARY KEY (batch_id, sample_id);
+
+
+--
+-- TOC entry 2934 (class 2606 OID 274971)
+-- Name: biostrat biostrat_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.biostrat
+    ADD CONSTRAINT biostrat_id PRIMARY KEY (biostrat_id);
+
+
+--
+-- TOC entry 2856 (class 2606 OID 274973)
+-- Name: collecting_event coll_event_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.collecting_event
+    ADD CONSTRAINT coll_event_id PRIMARY KEY (coll_event_id);
+
+
+--
+-- TOC entry 2946 (class 2606 OID 274975)
+-- Name: collector collector_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.collector
+    ADD CONSTRAINT collector_id PRIMARY KEY (collector_id);
+
+
+--
+-- TOC entry 2863 (class 2606 OID 274977)
+-- Name: dic_color color_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_color
+    ADD CONSTRAINT color_id PRIMARY KEY (color_id);
+
+
+--
+-- TOC entry 2859 (class 2606 OID 274979)
+-- Name: craton_terrane craton_terrane_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.craton_terrane
+    ADD CONSTRAINT craton_terrane_id PRIMARY KEY (craton_terrane_id);
+
+
+--
+-- TOC entry 2955 (class 2606 OID 274981)
+-- Name: data_source_batch data_source_batch_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_source_batch
+    ADD CONSTRAINT data_source_batch_id PRIMARY KEY (data_source_id, batch_id);
+
+
+--
+-- TOC entry 2951 (class 2606 OID 274983)
+-- Name: data_source data_source_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_source
+    ADD CONSTRAINT data_source_id PRIMARY KEY (data_source_id);
+
+
+--
+-- TOC entry 2972 (class 2606 OID 274985)
+-- Name: dic_biostrat dic_biostrat_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_biostrat
+    ADD CONSTRAINT dic_biostrat_id PRIMARY KEY (dic_biostrat_id);
+
+
+--
+-- TOC entry 2974 (class 2606 OID 274987)
+-- Name: dic_continent dic_continent_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_continent
+    ADD CONSTRAINT dic_continent_pkey PRIMARY KEY (iso_code);
+
+
+--
+-- TOC entry 2949 (class 2606 OID 274989)
+-- Name: dic_country dic_country_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_country
+    ADD CONSTRAINT dic_country_pkey PRIMARY KEY (country);
+
+
+--
+-- TOC entry 2976 (class 2606 OID 274991)
+-- Name: dic_institution_type dic_organization_type_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_institution_type
+    ADD CONSTRAINT dic_organization_type_pkey PRIMARY KEY (institution_type);
+
+
+--
+-- TOC entry 2982 (class 2606 OID 274993)
+-- Name: dic_publication dic_publication_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_publication
+    ADD CONSTRAINT dic_publication_pkey PRIMARY KEY (publication_id);
+
+
+--
+-- TOC entry 2881 (class 2606 OID 274995)
+-- Name: environment env_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.environment
+    ADD CONSTRAINT env_id PRIMARY KEY (env_id);
+
+
+--
+-- TOC entry 2922 (class 2606 OID 274997)
+-- Name: dic_exp_method exp_method_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_exp_method
+    ADD CONSTRAINT exp_method_id PRIMARY KEY (exp_method_id);
+
+
+--
+-- TOC entry 2961 (class 2606 OID 274999)
+-- Name: fossil fossil_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fossil
+    ADD CONSTRAINT fossil_id PRIMARY KEY (fossil_id);
+
+
+--
+-- TOC entry 2963 (class 2606 OID 275001)
+-- Name: fossil_sample fossil_sample_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fossil_sample
+    ADD CONSTRAINT fossil_sample_id PRIMARY KEY (fossil_sample_id);
+
+
+--
+-- TOC entry 2846 (class 2606 OID 275005)
+-- Name: geol_age geol_age_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.geol_age
+    ADD CONSTRAINT geol_age_id PRIMARY KEY (age_id);
+
+
+--
+-- TOC entry 2849 (class 2606 OID 275007)
+-- Name: geol_context geol_context_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.geol_context
+    ADD CONSTRAINT geol_context_id PRIMARY KEY (geol_context_id);
+
+
+--
+-- TOC entry 2937 (class 2606 OID 275009)
+-- Name: geol_context_provided_by geol_context_provided_by_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.geol_context_provided_by
+    ADD CONSTRAINT geol_context_provided_by_id PRIMARY KEY (geol_context_id, person_id);
+
+
+--
+-- TOC entry 2844 (class 2606 OID 275011)
+-- Name: dic_ics_age ics_age_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_ics_age
+    ADD CONSTRAINT ics_age_id PRIMARY KEY (ics_id);
+
+
+--
+-- TOC entry 2926 (class 2606 OID 275013)
+-- Name: institution institution_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.institution
+    ADD CONSTRAINT institution_id PRIMARY KEY (institution_id);
+
+
+--
+-- TOC entry 2928 (class 2606 OID 275015)
+-- Name: institution institution_institution_name_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.institution
+    ADD CONSTRAINT institution_institution_name_key UNIQUE (institution_name);
+
+
+--
+-- TOC entry 2885 (class 2606 OID 275017)
+-- Name: interpreted_age interpreted_age_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.interpreted_age
+    ADD CONSTRAINT interpreted_age_id PRIMARY KEY (interpreted_age_id);
+
+
+--
+-- TOC entry 2939 (class 2606 OID 275019)
+-- Name: interpreted_age_provided_by interpreted_age_provided_by_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.interpreted_age_provided_by
+    ADD CONSTRAINT interpreted_age_provided_by_id PRIMARY KEY (interpreted_age_id, person_id);
+
+
+--
+-- TOC entry 2831 (class 2606 OID 275021)
+-- Name: analyte_determination_limits limit_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analyte_determination_limits
+    ADD CONSTRAINT limit_id PRIMARY KEY (limit_id);
+
+
+--
+-- TOC entry 2865 (class 2606 OID 275023)
+-- Name: dic_lith_composition lith_composition_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_lith_composition
+    ADD CONSTRAINT lith_composition_id PRIMARY KEY (lith_composition_id);
+
+
+--
+-- TOC entry 2870 (class 2606 OID 275025)
+-- Name: dic_lithology lith_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_lithology
+    ADD CONSTRAINT lith_id PRIMARY KEY (lith_id);
+
+
+--
+-- TOC entry 2867 (class 2606 OID 275027)
+-- Name: dic_lith_texture lith_texture_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_lith_texture
+    ADD CONSTRAINT lith_texture_id PRIMARY KEY (lith_texture_id);
+
+
+--
+-- TOC entry 2889 (class 2606 OID 275029)
+-- Name: lithostrat lithostrat_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.lithostrat
+    ADD CONSTRAINT lithostrat_pkey PRIMARY KEY (lithostrat_id);
+
+
+--
+-- TOC entry 2879 (class 2606 OID 275031)
+-- Name: dic_meta meta_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_meta
+    ADD CONSTRAINT meta_id PRIMARY KEY (meta_id);
+
+
+--
+-- TOC entry 2941 (class 2606 OID 275033)
+-- Name: person person_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.person
+    ADD CONSTRAINT person_id PRIMARY KEY (person_id);
+
+
+--
+-- TOC entry 2924 (class 2606 OID 275035)
+-- Name: dic_prep_method prep_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_prep_method
+    ADD CONSTRAINT prep_id PRIMARY KEY (prep_id);
+
+
+--
+-- TOC entry 2988 (class 2606 OID 275037)
+-- Name: project_citation project_citation_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_citation
+    ADD CONSTRAINT project_citation_id PRIMARY KEY (project_id, reference_id);
+
+
+--
+-- TOC entry 2892 (class 2606 OID 275039)
+-- Name: project project_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project
+    ADD CONSTRAINT project_id PRIMARY KEY (project_id);
+
+
+--
+-- TOC entry 2895 (class 2606 OID 275041)
+-- Name: project project_project_name_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project
+    ADD CONSTRAINT project_project_name_key UNIQUE (project_name);
+
+
+--
+-- TOC entry 2899 (class 2606 OID 275043)
+-- Name: project_sample project_samples_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_sample
+    ADD CONSTRAINT project_samples_pkey PRIMARY KEY (project_id, sample_id);
+
+
+--
+-- TOC entry 2978 (class 2606 OID 275045)
+-- Name: dic_project_type project_type; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_project_type
+    ADD CONSTRAINT project_type PRIMARY KEY (project_type);
+
+
+--
+-- TOC entry 2980 (class 2606 OID 275047)
+-- Name: dic_proxy proxy_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_proxy
+    ADD CONSTRAINT proxy_id PRIMARY KEY (proxy_id);
+
+
+--
+-- TOC entry 2966 (class 2606 OID 275049)
+-- Name: proxy_published proxy_pub_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.proxy_published
+    ADD CONSTRAINT proxy_pub_id PRIMARY KEY (proxy_pub_id);
+
+
+--
+-- TOC entry 2986 (class 2606 OID 275051)
+-- Name: reference_work reference_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.reference_work
+    ADD CONSTRAINT reference_id PRIMARY KEY (reference_id);
+
+
+--
+-- TOC entry 2837 (class 2606 OID 274927)
+-- Name: sample sample_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sample
+    ADD CONSTRAINT sample_id PRIMARY KEY (sample_id);
+
+
+--
+-- TOC entry 2944 (class 2606 OID 275053)
+-- Name: sample_provided_by sample_provided_by_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sample_provided_by
+    ADD CONSTRAINT sample_provided_by_id PRIMARY KEY (sample_id, person_id);
+
+
+--
+-- TOC entry 2958 (class 2606 OID 275055)
+-- Name: dic_sed_structure sed_structure_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_sed_structure
+    ADD CONSTRAINT sed_structure_id PRIMARY KEY (sed_structure_id);
+
+
+--
+-- TOC entry 2968 (class 2606 OID 275057)
+-- Name: sed_structure_sample sed_structure_sample_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sed_structure_sample
+    ADD CONSTRAINT sed_structure_sample_id PRIMARY KEY (sed_structure_id, sample_id);
+
+
+--
+-- TOC entry 2904 (class 2606 OID 275059)
+-- Name: site site_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.site
+    ADD CONSTRAINT site_id PRIMARY KEY (site_id);
+
+
+--
+-- TOC entry 2990 (class 2606 OID 275061)
+-- Name: storage storage_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.storage
+    ADD CONSTRAINT storage_id PRIMARY KEY (storage_id);
+
+
+--
+-- TOC entry 2877 (class 2606 OID 275063)
+-- Name: dic_lithostrat strat_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_lithostrat
+    ADD CONSTRAINT strat_id PRIMARY KEY (strat_id);
+
+
+--
+-- TOC entry 2984 (class 2606 OID 275065)
+-- Name: dic_weathering weath_grade; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_weathering
+    ADD CONSTRAINT weath_grade PRIMARY KEY (weath_grade);
+
+
+--
+-- TOC entry 2814 (class 1259 OID 275066)
+-- Name: affiliation_institution_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX affiliation_institution_id_idx ON public.affiliation USING btree (institution_id);
+
+
+--
+-- TOC entry 2815 (class 1259 OID 275067)
+-- Name: affiliation_person_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX affiliation_person_id_idx ON public.affiliation USING btree (person_id);
+
+
+--
+-- TOC entry 2818 (class 1259 OID 275068)
+-- Name: analysis_ana_method_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX analysis_ana_method_id_idx ON public.analysis USING btree (ana_method_id);
+
+
+--
+-- TOC entry 2819 (class 1259 OID 275069)
+-- Name: analysis_exp_method_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX analysis_exp_method_id_idx ON public.analysis USING btree (exp_method_id);
+
+
+--
+-- TOC entry 2822 (class 1259 OID 275070)
+-- Name: analysis_prep_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX analysis_prep_id_idx ON public.analysis USING btree (prep_id);
+
+
+--
+-- TOC entry 2825 (class 1259 OID 275071)
+-- Name: analyte_determination_batch_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX analyte_determination_batch_id_idx ON public.analyte_determination USING btree (batch_id);
+
+
+--
+-- TOC entry 2826 (class 1259 OID 275072)
+-- Name: analyte_determination_limit_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX analyte_determination_limit_id_idx ON public.analyte_determination USING btree (limit_id);
+
+
+--
+-- TOC entry 2828 (class 1259 OID 275073)
+-- Name: analyte_determination_limits_analyte_code_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX analyte_determination_limits_analyte_code_idx ON public.analyte_determination_limits USING btree (analyte_code);
+
+
+--
+-- TOC entry 2829 (class 1259 OID 275074)
+-- Name: analyte_determination_limits_analyte_code_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX analyte_determination_limits_analyte_code_idx1 ON public.analyte_determination_limits USING btree (analyte_code);
+
+
+--
+-- TOC entry 2827 (class 1259 OID 275075)
+-- Name: analyte_determination_sample_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX analyte_determination_sample_id_idx ON public.analyte_determination USING btree (sample_id);
+
+
+--
+-- TOC entry 2911 (class 1259 OID 275076)
+-- Name: author_person_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX author_person_id_idx ON public.author USING btree (person_id);
+
+
+--
+-- TOC entry 2916 (class 1259 OID 275077)
+-- Name: author_reference_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX author_reference_id_idx ON public.author USING btree (reference_id);
+
+
+--
+-- TOC entry 2850 (class 1259 OID 275078)
+-- Name: basin_basin_name_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX basin_basin_name_idx ON public.basin USING btree (basin_name);
+
+
+--
+-- TOC entry 2851 (class 1259 OID 275079)
+-- Name: basin_basin_type_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX basin_basin_type_id_idx ON public.basin USING btree (basin_type_id);
+
+
+--
+-- TOC entry 2854 (class 1259 OID 275080)
+-- Name: basin_name_lower_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX basin_name_lower_idx ON public.basin USING btree (lower((basin_name)::text));
+
+
+--
+-- TOC entry 2929 (class 1259 OID 275081)
+-- Name: batch_sample_batch_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX batch_sample_batch_id_idx ON public.batch_sample USING btree (batch_id);
+
+
+--
+-- TOC entry 2932 (class 1259 OID 275082)
+-- Name: batch_sample_sample_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX batch_sample_sample_id_idx ON public.batch_sample USING btree (sample_id);
+
+
+--
+-- TOC entry 2935 (class 1259 OID 275083)
+-- Name: biostrat_verbatim_biostrat_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX biostrat_verbatim_biostrat_idx ON public.biostrat USING btree (verbatim_biostrat);
+
+
+--
+-- TOC entry 2857 (class 1259 OID 275084)
+-- Name: collecting_event_site_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX collecting_event_site_id_idx ON public.collecting_event USING btree (site_id);
+
+
+--
+-- TOC entry 2947 (class 1259 OID 275085)
+-- Name: country_lower_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX country_lower_idx ON public.dic_country USING btree (lower((country)::text));
+
+
+--
+-- TOC entry 2952 (class 1259 OID 275086)
+-- Name: data_source_batch_batch_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX data_source_batch_batch_id_idx ON public.data_source_batch USING btree (batch_id);
+
+
+--
+-- TOC entry 2953 (class 1259 OID 275087)
+-- Name: data_source_batch_data_source_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX data_source_batch_data_source_id_idx ON public.data_source_batch USING btree (data_source_id);
+
+
+--
+-- TOC entry 2842 (class 1259 OID 275088)
+-- Name: dic_ics_age_lower_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX dic_ics_age_lower_idx ON public.dic_ics_age USING btree (lower((ics_name)::text));
+
+
+--
+-- TOC entry 2873 (class 1259 OID 275089)
+-- Name: dic_lithostrat_lower_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX dic_lithostrat_lower_idx ON public.dic_lithostrat USING btree (lower((strat_name)::text));
+
+
+--
+-- TOC entry 2874 (class 1259 OID 275090)
+-- Name: dic_lithostrat_strat_name_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX dic_lithostrat_strat_name_idx ON public.dic_lithostrat USING btree (strat_name);
+
+
+--
+-- TOC entry 2875 (class 1259 OID 275091)
+-- Name: dic_lithostrat_strat_name_long_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX dic_lithostrat_strat_name_long_idx ON public.dic_lithostrat USING btree (strat_name_long);
+
+
+--
+-- TOC entry 2956 (class 1259 OID 275092)
+-- Name: dic_sed_structure_sed_structure_name_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX dic_sed_structure_sed_structure_name_idx ON public.dic_sed_structure USING btree (sed_structure_name);
+
+
+--
+-- TOC entry 2882 (class 1259 OID 275093)
+-- Name: environment_env_bin_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX environment_env_bin_idx ON public.environment USING btree (env_bin);
+
+
+--
+-- TOC entry 2959 (class 1259 OID 275094)
+-- Name: fossil_fossil_name_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX fossil_fossil_name_idx ON public.fossil USING btree (fossil_name);
+
+
+--
+-- TOC entry 2964 (class 1259 OID 275095)
+-- Name: fossil_sample_verbatim_fossil_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX fossil_sample_verbatim_fossil_idx ON public.fossil_sample USING btree (verbatim_fossil);
+
+
+--
+-- TOC entry 2900 (class 1259 OID 275096)
+-- Name: lat_dec_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX lat_dec_idx ON public.site USING btree (lower((lat_dec)::text));
+
+
+--
+-- TOC entry 2868 (class 1259 OID 275097)
+-- Name: lith_class_lower_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX lith_class_lower_idx ON public.dic_lithology USING btree (lower((lith_class)::text));
+
+
+--
+-- TOC entry 2871 (class 1259 OID 275098)
+-- Name: lith_name_lower_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX lith_name_lower_idx ON public.dic_lithology USING btree (lower((lith_name)::text));
+
+
+--
+-- TOC entry 2872 (class 1259 OID 275099)
+-- Name: lith_type_lower_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX lith_type_lower_idx ON public.dic_lithology USING btree (lower((lith_type)::text));
+
+
+--
+-- TOC entry 2887 (class 1259 OID 275100)
+-- Name: lithostrat_lithostrat_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX lithostrat_lithostrat_id_idx ON public.lithostrat USING btree (lithostrat_id);
+
+
+--
+-- TOC entry 2901 (class 1259 OID 275101)
+-- Name: long_dec_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX long_dec_idx ON public.site USING btree (lower((long_dec)::text));
+
+
+--
+-- TOC entry 2832 (class 1259 OID 275105)
+-- Name: original_num_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX original_num_idx ON public.sample USING btree (lower((original_num)::text));
+
+
+--
+-- TOC entry 2942 (class 1259 OID 275106)
+-- Name: person_lower_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX person_lower_idx ON public.person USING btree (lower((last_name)::text));
+
+
+--
+-- TOC entry 2893 (class 1259 OID 275107)
+-- Name: project_name_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX project_name_idx ON public.project USING btree (lower((project_name)::text));
+
+
+--
+-- TOC entry 2896 (class 1259 OID 275108)
+-- Name: project_sample_project_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX project_sample_project_id_idx ON public.project_sample USING btree (project_id);
+
+
+--
+-- TOC entry 2897 (class 1259 OID 275109)
+-- Name: project_sample_sample_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX project_sample_sample_id_idx ON public.project_sample USING btree (sample_id);
+
+
+--
+-- TOC entry 2833 (class 1259 OID 275110)
+-- Name: sample_coll_event_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sample_coll_event_id_idx ON public.sample USING btree (coll_event_id);
+
+
+--
+-- TOC entry 2834 (class 1259 OID 275111)
+-- Name: sample_color_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sample_color_id_idx ON public.sample USING btree (color_id);
+
+
+--
+-- TOC entry 2835 (class 1259 OID 275112)
+-- Name: sample_geol_context_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sample_geol_context_id_idx ON public.sample USING btree (geol_context_id);
+
+
+--
+-- TOC entry 2886 (class 1259 OID 275113)
+-- Name: sample_id_uniq; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX sample_id_uniq ON public.interpreted_age USING btree (sample_id);
+
+
+--
+-- TOC entry 2838 (class 1259 OID 275114)
+-- Name: sample_is_bioturbated_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sample_is_bioturbated_idx ON public.sample USING btree (is_bioturbated);
+
+
+--
+-- TOC entry 2839 (class 1259 OID 275115)
+-- Name: sample_lith_composition_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sample_lith_composition_id_idx ON public.sample USING btree (lith_composition_id);
+
+
+--
+-- TOC entry 2840 (class 1259 OID 275116)
+-- Name: sample_lith_texture_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sample_lith_texture_id_idx ON public.sample USING btree (lith_texture_id);
+
+
+--
+-- TOC entry 2902 (class 1259 OID 275117)
+-- Name: section_name_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX section_name_idx ON public.site USING btree (lower((section_name)::text));
+
+
+--
+-- TOC entry 2905 (class 1259 OID 275118)
+-- Name: site_metamorphic_bin_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX site_metamorphic_bin_idx ON public.site USING btree (metamorphic_bin);
+
+
+--
+-- TOC entry 2906 (class 1259 OID 275119)
+-- Name: site_site_type_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX site_site_type_idx ON public.site USING btree (site_type);
+
+
+--
+-- TOC entry 2847 (class 1259 OID 275120)
+-- Name: verbatim_age_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX verbatim_age_idx ON public.geol_age USING btree (lower((verbatim_age)::text));
+
+
+--
+-- TOC entry 2883 (class 1259 OID 275121)
+-- Name: verbatim_env_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX verbatim_env_idx ON public.environment USING btree (lower((verbatim_env)::text));
+
+
+--
+-- TOC entry 2841 (class 1259 OID 275122)
+-- Name: verbatim_lith_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX verbatim_lith_idx ON public.sample USING btree (lower((verbatim_lith)::text));
+
+
+--
+-- TOC entry 2890 (class 1259 OID 275123)
+-- Name: verbatim_strat_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX verbatim_strat_idx ON public.lithostrat USING btree (lower((verbatim_strat)::text));
+
+
+--
+-- TOC entry 3002 (class 2606 OID 275124)
+-- Name: analyte_determination_limits analysis_analyte_determination_limits_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analyte_determination_limits
+    ADD CONSTRAINT analysis_analyte_determination_limits_fk FOREIGN KEY (analysis_id) REFERENCES public.analysis(analysis_id);
+
+
+--
+-- TOC entry 2999 (class 2606 OID 275129)
+-- Name: analyte_determination analyte_determination_limit_analyte_determination_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analyte_determination
+    ADD CONSTRAINT analyte_determination_limit_analyte_determination_fk FOREIGN KEY (limit_id) REFERENCES public.analyte_determination_limits(limit_id);
+
+
+--
+-- TOC entry 3017 (class 2606 OID 275134)
+-- Name: basin basin_dic_basin_type_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.basin
+    ADD CONSTRAINT basin_dic_basin_type_fk FOREIGN KEY (basin_type_id) REFERENCES public.dic_basin_type(basin_type_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3025 (class 2606 OID 275139)
+-- Name: site basin_site_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.site
+    ADD CONSTRAINT basin_site_fk FOREIGN KEY (basin_id) REFERENCES public.basin(basin_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 2993 (class 2606 OID 275144)
+-- Name: analysis batch_analysis_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analysis
+    ADD CONSTRAINT batch_analysis_fk FOREIGN KEY (batch_id) REFERENCES public.batch(batch_id);
+
+
+--
+-- TOC entry 3037 (class 2606 OID 275149)
+-- Name: batch_sample batch_batch_sample_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.batch_sample
+    ADD CONSTRAINT batch_batch_sample_fk FOREIGN KEY (batch_id) REFERENCES public.batch(batch_id);
+
+
+--
+-- TOC entry 3049 (class 2606 OID 275154)
+-- Name: data_source_batch batch_data_source_batch_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_source_batch
+    ADD CONSTRAINT batch_data_source_batch_fk FOREIGN KEY (batch_id) REFERENCES public.batch(batch_id);
+
+
+--
+-- TOC entry 3000 (class 2606 OID 275159)
+-- Name: analyte_determination batch_sample_analyte_determination_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analyte_determination
+    ADD CONSTRAINT batch_sample_analyte_determination_fk FOREIGN KEY (sample_id, batch_id) REFERENCES public.batch_sample(sample_id, batch_id) DEFERRABLE;
+
+
+--
+-- TOC entry 3039 (class 2606 OID 275200)
+-- Name: biostrat biostrat_dic_biostrat_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.biostrat
+    ADD CONSTRAINT biostrat_dic_biostrat_fk FOREIGN KEY (dic_biostrat_id) REFERENCES public.dic_biostrat(dic_biostrat_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3013 (class 2606 OID 275205)
+-- Name: geol_context biostrat_geol_context_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.geol_context
+    ADD CONSTRAINT biostrat_geol_context_fk FOREIGN KEY (biostrat_id) REFERENCES public.biostrat(biostrat_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3046 (class 2606 OID 275210)
+-- Name: collector collecting_event_collector_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.collector
+    ADD CONSTRAINT collecting_event_collector_fk FOREIGN KEY (coll_event_id) REFERENCES public.collecting_event(coll_event_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3004 (class 2606 OID 275215)
+-- Name: sample collecting_event_sample_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sample
+    ADD CONSTRAINT collecting_event_sample_fk FOREIGN KEY (coll_event_id) REFERENCES public.collecting_event(coll_event_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3005 (class 2606 OID 275220)
+-- Name: sample color_sample_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sample
+    ADD CONSTRAINT color_sample_fk FOREIGN KEY (color_id) REFERENCES public.dic_color(color_id);
+
+
+--
+-- TOC entry 3050 (class 2606 OID 275225)
+-- Name: data_source_batch data_source_data_source_batch_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_source_batch
+    ADD CONSTRAINT data_source_data_source_batch_fk FOREIGN KEY (data_source_id) REFERENCES public.data_source(data_source_id);
+
+
+--
+-- TOC entry 2994 (class 2606 OID 275230)
+-- Name: analysis dic_analysis_method_analysis_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analysis
+    ADD CONSTRAINT dic_analysis_method_analysis_fk FOREIGN KEY (ana_method_id) REFERENCES public.dic_ana_method(ana_method_id);
+
+
+--
+-- TOC entry 3003 (class 2606 OID 275235)
+-- Name: analyte_determination_limits dic_analyte_analyte_determination_limits_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analyte_determination_limits
+    ADD CONSTRAINT dic_analyte_analyte_determination_limits_fk FOREIGN KEY (analyte_code) REFERENCES public.dic_analyte(analyte_code);
+
+
+--
+-- TOC entry 3048 (class 2606 OID 275240)
+-- Name: dic_country dic_continent_dic_country_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_country
+    ADD CONSTRAINT dic_continent_dic_country_fk FOREIGN KEY (continent_code) REFERENCES public.dic_continent(iso_code);
+
+
+--
+-- TOC entry 3026 (class 2606 OID 275245)
+-- Name: site dic_country_site; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.site
+    ADD CONSTRAINT dic_country_site FOREIGN KEY (country) REFERENCES public.dic_country(country);
+
+
+--
+-- TOC entry 2995 (class 2606 OID 275250)
+-- Name: analysis dic_exp_method_analysis_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analysis
+    ADD CONSTRAINT dic_exp_method_analysis_fk FOREIGN KEY (exp_method_id) REFERENCES public.dic_exp_method(exp_method_id);
+
+
+--
+-- TOC entry 3036 (class 2606 OID 275255)
+-- Name: institution dic_institution_type_institution_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.institution
+    ADD CONSTRAINT dic_institution_type_institution_fk FOREIGN KEY (institution_type) REFERENCES public.dic_institution_type(institution_type);
+
+
+--
+-- TOC entry 3059 (class 2606 OID 275260)
+-- Name: reference_work dic_journal_reference_work_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.reference_work
+    ADD CONSTRAINT dic_journal_reference_work_fk FOREIGN KEY (journal_id) REFERENCES public.dic_publication(publication_id);
+
+
+--
+-- TOC entry 3006 (class 2606 OID 275265)
+-- Name: sample dic_lith_composition_sample_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sample
+    ADD CONSTRAINT dic_lith_composition_sample_fk FOREIGN KEY (lith_composition_id) REFERENCES public.dic_lith_composition(lith_composition_id);
+
+
+--
+-- TOC entry 3007 (class 2606 OID 275270)
+-- Name: sample dic_lith_texture_sample_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sample
+    ADD CONSTRAINT dic_lith_texture_sample_fk FOREIGN KEY (lith_texture_id) REFERENCES public.dic_lith_texture(lith_texture_id);
+
+
+--
+-- TOC entry 3008 (class 2606 OID 275275)
+-- Name: sample dic_lithology_sample_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sample
+    ADD CONSTRAINT dic_lithology_sample_fk FOREIGN KEY (lith_id) REFERENCES public.dic_lithology(lith_id);
+
+
+--
+-- TOC entry 3027 (class 2606 OID 275280)
+-- Name: site dic_meta_site_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.site
+    ADD CONSTRAINT dic_meta_site_fk FOREIGN KEY (metamorphic_bin) REFERENCES public.dic_meta(meta_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 2996 (class 2606 OID 275285)
+-- Name: analysis dic_prep_method_analysis_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analysis
+    ADD CONSTRAINT dic_prep_method_analysis_fk FOREIGN KEY (prep_id) REFERENCES public.dic_prep_method(prep_id);
+
+
+--
+-- TOC entry 3022 (class 2606 OID 275290)
+-- Name: project dic_project_type_project_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project
+    ADD CONSTRAINT dic_project_type_project_fk FOREIGN KEY (project_type) REFERENCES public.dic_project_type(project_type) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3053 (class 2606 OID 275295)
+-- Name: proxy_published dic_proxy_proxy_published_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.proxy_published
+    ADD CONSTRAINT dic_proxy_proxy_published_fk FOREIGN KEY (proxy_id) REFERENCES public.dic_proxy(proxy_id);
+
+
+--
+-- TOC entry 3009 (class 2606 OID 275300)
+-- Name: sample dic_weathering_sample_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sample
+    ADD CONSTRAINT dic_weathering_sample_fk FOREIGN KEY (weath_grade) REFERENCES public.dic_weathering(weath_grade);
+
+
+--
+-- TOC entry 3014 (class 2606 OID 275305)
+-- Name: geol_context environment_geol_context_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.geol_context
+    ADD CONSTRAINT environment_geol_context_fk FOREIGN KEY (env_id) REFERENCES public.environment(env_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3051 (class 2606 OID 275310)
+-- Name: fossil_sample fossil_fossil_sample_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fossil_sample
+    ADD CONSTRAINT fossil_fossil_sample_fk FOREIGN KEY (fossil_id) REFERENCES public.fossil(fossil_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3015 (class 2606 OID 275315)
+-- Name: geol_context geol_age_geol_context_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.geol_context
+    ADD CONSTRAINT geol_age_geol_context_fk FOREIGN KEY (age_id) REFERENCES public.geol_age(age_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3040 (class 2606 OID 275320)
+-- Name: geol_context_provided_by geol_context_geol_context_provided_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.geol_context_provided_by
+    ADD CONSTRAINT geol_context_geol_context_provided_by_fk FOREIGN KEY (geol_context_id) REFERENCES public.geol_context(geol_context_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3010 (class 2606 OID 275325)
+-- Name: sample geol_context_sample_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sample
+    ADD CONSTRAINT geol_context_sample_fk FOREIGN KEY (geol_context_id) REFERENCES public.geol_context(geol_context_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3028 (class 2606 OID 275330)
+-- Name: site geological_region_site_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.site
+    ADD CONSTRAINT geological_region_site_fk FOREIGN KEY (craton_terrane_id) REFERENCES public.craton_terrane(craton_terrane_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3012 (class 2606 OID 275335)
+-- Name: geol_age ics_age_geol_age_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.geol_age
+    ADD CONSTRAINT ics_age_geol_age_fk FOREIGN KEY (ics_id) REFERENCES public.dic_ics_age(ics_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 2991 (class 2606 OID 275340)
+-- Name: affiliation institution_affiliation_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.affiliation
+    ADD CONSTRAINT institution_affiliation_fk FOREIGN KEY (institution_id) REFERENCES public.institution(institution_id);
+
+
+--
+-- TOC entry 3033 (class 2606 OID 275345)
+-- Name: batch institution_batch_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.batch
+    ADD CONSTRAINT institution_batch_fk FOREIGN KEY (lab_id) REFERENCES public.institution(institution_id);
+
+
+--
+-- TOC entry 3062 (class 2606 OID 275350)
+-- Name: storage institution_storage_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.storage
+    ADD CONSTRAINT institution_storage_fk FOREIGN KEY (institution_id) REFERENCES public.institution(institution_id);
+
+
+--
+-- TOC entry 3042 (class 2606 OID 275355)
+-- Name: interpreted_age_provided_by interpreted_age_interpreted_age_provided_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.interpreted_age_provided_by
+    ADD CONSTRAINT interpreted_age_interpreted_age_provided_by_fk FOREIGN KEY (interpreted_age_id) REFERENCES public.interpreted_age(interpreted_age_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3021 (class 2606 OID 275360)
+-- Name: lithostrat lithostrat_strat_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.lithostrat
+    ADD CONSTRAINT lithostrat_strat_fk FOREIGN KEY (strat_id) REFERENCES public.dic_lithostrat(strat_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 2992 (class 2606 OID 275365)
+-- Name: affiliation person_affiliation_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.affiliation
+    ADD CONSTRAINT person_affiliation_fk FOREIGN KEY (person_id) REFERENCES public.person(person_id);
+
+
+--
+-- TOC entry 2997 (class 2606 OID 275370)
+-- Name: analysis person_analysis_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analysis
+    ADD CONSTRAINT person_analysis_fk FOREIGN KEY (run_by) REFERENCES public.person(person_id);
+
+
+--
+-- TOC entry 2998 (class 2606 OID 275375)
+-- Name: analysis person_analysis_fk_1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analysis
+    ADD CONSTRAINT person_analysis_fk_1 FOREIGN KEY (provided_by) REFERENCES public.person(person_id);
+
+
+--
+-- TOC entry 3031 (class 2606 OID 275380)
+-- Name: author person_author_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.author
+    ADD CONSTRAINT person_author_fk FOREIGN KEY (person_id) REFERENCES public.person(person_id);
+
+
+--
+-- TOC entry 3047 (class 2606 OID 275385)
+-- Name: collector person_collector_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.collector
+    ADD CONSTRAINT person_collector_fk FOREIGN KEY (person_id) REFERENCES public.person(person_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3063 (class 2606 OID 275390)
+-- Name: storage person_contact_person; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.storage
+    ADD CONSTRAINT person_contact_person FOREIGN KEY (contact_person) REFERENCES public.person(person_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3041 (class 2606 OID 275395)
+-- Name: geol_context_provided_by person_geol_context_provided_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.geol_context_provided_by
+    ADD CONSTRAINT person_geol_context_provided_by_fk FOREIGN KEY (person_id) REFERENCES public.person(person_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3043 (class 2606 OID 275400)
+-- Name: interpreted_age_provided_by person_interpreted_age_provided_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.interpreted_age_provided_by
+    ADD CONSTRAINT person_interpreted_age_provided_by_fk FOREIGN KEY (person_id) REFERENCES public.person(person_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3044 (class 2606 OID 275405)
+-- Name: sample_provided_by person_sample_provided_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sample_provided_by
+    ADD CONSTRAINT person_sample_provided_by_fk FOREIGN KEY (person_id) REFERENCES public.person(person_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3060 (class 2606 OID 275410)
+-- Name: project_citation project_project_citation_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_citation
+    ADD CONSTRAINT project_project_citation_fk FOREIGN KEY (project_id) REFERENCES public.project(project_id);
+
+
+--
+-- TOC entry 3023 (class 2606 OID 275415)
+-- Name: project_sample project_project_samples_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_sample
+    ADD CONSTRAINT project_project_samples_fk FOREIGN KEY (project_id) REFERENCES public.project(project_id);
+
+
+--
+-- TOC entry 3029 (class 2606 OID 275420)
+-- Name: alternate_num reference_work_alternate_num_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.alternate_num
+    ADD CONSTRAINT reference_work_alternate_num_fk FOREIGN KEY (reference_id) REFERENCES public.reference_work(reference_id);
+
+
+--
+-- TOC entry 3001 (class 2606 OID 275425)
+-- Name: analyte_determination reference_work_analyte_determination_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analyte_determination
+    ADD CONSTRAINT reference_work_analyte_determination_fk FOREIGN KEY (reference_id) REFERENCES public.reference_work(reference_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3032 (class 2606 OID 275430)
+-- Name: author reference_work_author_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.author
+    ADD CONSTRAINT reference_work_author_fk FOREIGN KEY (reference_id) REFERENCES public.reference_work(reference_id);
+
+
+--
+-- TOC entry 3034 (class 2606 OID 275435)
+-- Name: dic_ana_method reference_work_dic_analysis_method_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_ana_method
+    ADD CONSTRAINT reference_work_dic_analysis_method_fk FOREIGN KEY (reference_id) REFERENCES public.reference_work(reference_id);
+
+
+--
+-- TOC entry 3035 (class 2606 OID 275440)
+-- Name: dic_exp_method reference_work_dic_exp_method_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_exp_method
+    ADD CONSTRAINT reference_work_dic_exp_method_fk FOREIGN KEY (reference_id) REFERENCES public.reference_work(reference_id);
+
+
+--
+-- TOC entry 3058 (class 2606 OID 275445)
+-- Name: dic_proxy reference_work_dic_proxy_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dic_proxy
+    ADD CONSTRAINT reference_work_dic_proxy_fk FOREIGN KEY (reference_id) REFERENCES public.reference_work(reference_id);
+
+
+--
+-- TOC entry 3019 (class 2606 OID 275455)
+-- Name: interpreted_age reference_work_interpreted_age_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.interpreted_age
+    ADD CONSTRAINT reference_work_interpreted_age_fk FOREIGN KEY (reference_id) REFERENCES public.reference_work(reference_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3061 (class 2606 OID 275460)
+-- Name: project_citation reference_work_project_citation_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_citation
+    ADD CONSTRAINT reference_work_project_citation_fk FOREIGN KEY (reference_id) REFERENCES public.reference_work(reference_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3054 (class 2606 OID 275465)
+-- Name: proxy_published reference_work_proxy_published_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.proxy_published
+    ADD CONSTRAINT reference_work_proxy_published_fk FOREIGN KEY (reference_id) REFERENCES public.reference_work(reference_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3030 (class 2606 OID 275470)
+-- Name: alternate_num sample_alternate_num_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.alternate_num
+    ADD CONSTRAINT sample_alternate_num_fk FOREIGN KEY (sample_id) REFERENCES public.sample(sample_id);
+
+
+--
+-- TOC entry 3038 (class 2606 OID 275475)
+-- Name: batch_sample sample_batch_sample_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.batch_sample
+    ADD CONSTRAINT sample_batch_sample_fk FOREIGN KEY (sample_id) REFERENCES public.sample(sample_id);
+
+
+--
+-- TOC entry 3052 (class 2606 OID 275480)
+-- Name: fossil_sample sample_fossil_sample_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fossil_sample
+    ADD CONSTRAINT sample_fossil_sample_fk FOREIGN KEY (sample_id) REFERENCES public.sample(sample_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3020 (class 2606 OID 275490)
+-- Name: interpreted_age sample_interpreted_age_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.interpreted_age
+    ADD CONSTRAINT sample_interpreted_age_fk FOREIGN KEY (sample_id) REFERENCES public.sample(sample_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3024 (class 2606 OID 275495)
+-- Name: project_sample sample_project_samples_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_sample
+    ADD CONSTRAINT sample_project_samples_fk FOREIGN KEY (sample_id) REFERENCES public.sample(sample_id) ON UPDATE CASCADE ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3055 (class 2606 OID 275500)
+-- Name: proxy_published sample_proxy_published_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.proxy_published
+    ADD CONSTRAINT sample_proxy_published_fk FOREIGN KEY (sample_id) REFERENCES public.sample(sample_id);
+
+
+--
+-- TOC entry 3045 (class 2606 OID 275505)
+-- Name: sample_provided_by sample_sample_provided_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sample_provided_by
+    ADD CONSTRAINT sample_sample_provided_by_fk FOREIGN KEY (sample_id) REFERENCES public.sample(sample_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3056 (class 2606 OID 275510)
+-- Name: sed_structure_sample sample_sed_structure_sample_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sed_structure_sample
+    ADD CONSTRAINT sample_sed_structure_sample_fk FOREIGN KEY (sample_id) REFERENCES public.sample(sample_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3057 (class 2606 OID 275515)
+-- Name: sed_structure_sample sed_structure_sed_structure_sample_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sed_structure_sample
+    ADD CONSTRAINT sed_structure_sed_structure_sample_fk FOREIGN KEY (sed_structure_id) REFERENCES public.dic_sed_structure(sed_structure_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- TOC entry 3018 (class 2606 OID 275520)
+-- Name: collecting_event site_collecting_event_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.collecting_event
+    ADD CONSTRAINT site_collecting_event_fk FOREIGN KEY (site_id) REFERENCES public.site(site_id);
+
+
+--
+-- TOC entry 3011 (class 2606 OID 275525)
+-- Name: sample storage_sample_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sample
+    ADD CONSTRAINT storage_sample_fk FOREIGN KEY (storage_id) REFERENCES public.storage(storage_id);
+
+
+--
+-- TOC entry 3016 (class 2606 OID 275530)
+-- Name: geol_context strat_geol_context_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.geol_context
+    ADD CONSTRAINT strat_geol_context_fk FOREIGN KEY (lithostrat_id) REFERENCES public.lithostrat(lithostrat_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+-- Completed on 2020-08-15 17:37:45 IST
+
+--
+-- PostgreSQL database dump complete
+--

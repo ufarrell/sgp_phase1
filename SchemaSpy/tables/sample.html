@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>sample - phase1_v2.1 Database</title>
+        <!-- Tell the browser to be responsive to screen width -->
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+        <link rel="icon" type="image/png" sizes="16x16" href="../favicon.png">
+        <!-- Bootstrap 3.3.5 -->
+        <link rel="stylesheet" href="../bower/admin-lte/bootstrap/css/bootstrap.min.css">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="../bower/font-awesome/css/font-awesome.min.css">
+        <!-- Ionicons -->
+        <link rel="stylesheet" href="../bower/ionicons/css/ionicons.min.css">
+        <!-- DataTables -->
+        <link rel="stylesheet" href="../bower/datatables.net-bs/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="../bower/datatables.net-buttons-bs/css/buttons.bootstrap.min.css">
+        <!-- Code Mirror -->
+        <link rel="stylesheet" href="../bower/codemirror/codemirror.css">
+        <!-- Fonts -->
+        <link href='../fonts/indieflower/indie-flower.css' rel='stylesheet' type='text/css'>
+        <link href='../fonts/source-sans-pro/source-sans-pro.css' rel='stylesheet' type='text/css'>
+
+        <!-- Theme style -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/AdminLTE.min.css">
+        <!-- Salvattore -->
+        <link rel="stylesheet" href="../bower/salvattore/salvattore.css">
+        <!-- AdminLTE Skins. Choose a skin from the css/skins
+           folder instead of downloading all of them to reduce the load. -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/skins/_all-skins.min.css">
+        <!-- SchemaSpy -->
+        <link rel="stylesheet" href="../schemaSpy.css">
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="../bower/html5shiv/html5shiv.min.js"></script>
+        <script src="../bower/respond/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
+    <body class="hold-transition skin-blue layout-top-nav">
+        <div class="wrapper">
+            <header class="main-header">
+                <nav class="navbar navbar-static-top">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <a href="../index.html" class="navbar-brand"><b>phase1_v2.1</b> Database</a>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse"><i class="fa fa-bars"></i></button>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="../index.html">Tables <span class="sr-only">(current)</span></a></li>
+                                <li><a href="../columns.html" title="All of the columns in the schema">Columns</a></li>
+                                <li><a href="../constraints.html" title="Useful for diagnosing error messages that just give constraint name or number">Constraints</a></li>
+                                <li><a href="../relationships.html" title="Diagram of table relationships">Relationships</a></li>
+                                <li><a href="../orphans.html" title="View of tables with neither parents nor children">Orphan&nbsp;Tables</a></li>
+                                <li><a href="../anomalies.html" title="Things that might not be quite right">Anomalies</a></li>
+                                <li><a href="../routines.html" title="Procedures and functions">Routines</a></li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                        <!-- Navbar Right Menu -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+            </header>
+            <!-- Main content -->
+            <!-- Full Width Column -->
+            <div class="content-wrapper">
+                <!-- Content Header (Page header) -->
+                <section class="content-header">
+                    <h1>sample</h1><p><span id="recordNumber">82578</span> rows</p><br />
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-text-o"></i>
+                            <h3 id="Description" class="box-title">Description</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div><!-- /.box-header -->
+                        <div class="box-body clearfix">
+                            <p>Samples collected for analysis.</p>
+                        </div><!-- /.box-body -->
+                    </div>
+                </section>
+                <!-- Main content -->
+                <section class="content">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+                            <h3 id="Columns" class="box-title">Columns</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <table id="standard_table" class="table table-bordered table-striped dataTable" role="grid">
+                                <thead align='left'>
+                                <tr>
+                                    <th>Column</th>
+                                    <th>Type</th>
+                                    <th>Size</th>
+                                    <th title='Are nulls allowed?'>Nulls</th>
+                                    <th title='Is column automatically updated?'>Auto</th>
+                                    <th title='Default value'>Default</th>
+                                    <th title='Columns in tables that reference this column'>Children</th>
+                                    <th title='Columns in tables that are referenced by this column'>Parents</th>
+                                    <th title='Comments' class="toggle"><span>Comments</span></th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td class='primaryKey' title='Primary Key'><i class='icon ion-key iconkey' style='padding-left: 5px;'></i><span id="sample_id">sample_id</span></td>
+                                    <td>serial</td>
+                                    <td>10</td>
+                                    <td title=''></td>
+                                    <td title='Automatically updated by the database'>√</td>
+                                    <td>nextval(&#39;sample_sample_id_seq&#39;::regclass)</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                            <tr>
+                                                <td title="alternate_num.sample_id references sample.sample_id via sample_alternate_num_fk"><a href='alternate_num.html'>alternate_num</a><span class='relatedKey'>.sample_id</span></td>
+                                                <td class="constraint detail">sample_alternate_num_fk<span title='Restrict delete:&#10;Parent cannot be deleted if children exist'>R</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td title="batch_sample.sample_id references sample.sample_id via sample_batch_sample_fk"><a href='batch_sample.html'>batch_sample</a><span class='relatedKey'>.sample_id</span></td>
+                                                <td class="constraint detail">sample_batch_sample_fk<span title='Restrict delete:&#10;Parent cannot be deleted if children exist'>R</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td title="fossil_sample.sample_id references sample.sample_id via sample_fossil_sample_fk"><a href='fossil_sample.html'>fossil_sample</a><span class='relatedKey'>.sample_id</span></td>
+                                                <td class="constraint detail">sample_fossil_sample_fk<span title='Restrict delete:&#10;Parent cannot be deleted if children exist'>R</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td title="interpreted_age.sample_id references sample.sample_id via sample_interpreted_age_fk"><a href='interpreted_age.html'>interpreted_age</a><span class='relatedKey'>.sample_id</span></td>
+                                                <td class="constraint detail">sample_interpreted_age_fk<span title='Restrict delete:&#10;Parent cannot be deleted if children exist'>R</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td title="project_sample.sample_id references sample.sample_id via sample_project_samples_fk"><a href='project_sample.html'>project_sample</a><span class='relatedKey'>.sample_id</span></td>
+                                                <td class="constraint detail">sample_project_samples_fk<span title='Cascade on delete:&#10;Deletion of parent deletes child'>C</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td title="proxy_published.sample_id references sample.sample_id via sample_proxy_published_fk"><a href='proxy_published.html'>proxy_published</a><span class='relatedKey'>.sample_id</span></td>
+                                                <td class="constraint detail">sample_proxy_published_fk<span title='Restrict delete:&#10;Parent cannot be deleted if children exist'>R</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td title="sample_provided_by.sample_id references sample.sample_id via sample_sample_provided_by_fk"><a href='sample_provided_by.html'>sample_provided_by</a><span class='relatedKey'>.sample_id</span></td>
+                                                <td class="constraint detail">sample_sample_provided_by_fk<span title='Restrict delete:&#10;Parent cannot be deleted if children exist'>R</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td title="sed_structure_sample.sample_id references sample.sample_id via sample_sed_structure_sample_fk"><a href='sed_structure_sample.html'>sed_structure_sample</a><span class='relatedKey'>.sample_id</span></td>
+                                                <td class="constraint detail">sample_sed_structure_sample_fk<span title='Restrict delete:&#10;Parent cannot be deleted if children exist'>R</span></td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>PK. Unique identifier for a sample. Generated by database</p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="igsn">igsn</span></td>
+                                    <td>varchar</td>
+                                    <td>25</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>International Geo Sample Number, see geosamples.org/igsnabout.</p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="original_num">original_num</span></td>
+                                    <td>varchar</td>
+                                    <td>250</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>Original reported/published sample number. Note that the original_num is not necessarily unique.</p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="height_depth_m">height_depth_m</span></td>
+                                    <td>numeric</td>
+                                    <td>7,2</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>Height or depth in meters in the measured section or core.</p></td>
+                                </tr>
+                                <tr>
+                                    <td class='foreignKey' title='Foreign Key'><i class='icon ion-key iconkey' style='padding-left: 5px;'></i><span id="geol_context_id">geol_context_id</span></td>
+                                    <td>int4</td>
+                                    <td>10</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                            <tr>
+                                                <td title="sample.geol_context_id references geol_context.geol_context_id via geol_context_sample_fk"><a href='geol_context.html'>geol_context</a><span class='relatedKey'>.geol_context_id</span></td>
+                                                <td class="constraint detail">geol_context_sample_fk<span title='Restrict delete:&#10;Parent cannot be deleted if children exist'>R</span></td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td><p>FK. ID for the geological context. Links to the geol_context table.</p></td>
+                                </tr>
+                                <tr>
+                                    <td class='foreignKey' title='Foreign Key'><i class='icon ion-key iconkey' style='padding-left: 5px;'></i><span id="storage_id">storage_id</span></td>
+                                    <td>int4</td>
+                                    <td>10</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                            <tr>
+                                                <td title="sample.storage_id references storage.storage_id via storage_sample_fk"><a href='storage.html'>storage</a><span class='relatedKey'>.storage_id</span></td>
+                                                <td class="constraint detail">storage_sample_fk<span title='Restrict delete:&#10;Parent cannot be deleted if children exist'>R</span></td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td><p>FK. ID for the sample storage location. Links to the storage table.</p></td>
+                                </tr>
+                                <tr>
+                                    <td class='foreignKey' title='Foreign Key'><i class='icon ion-key iconkey' style='padding-left: 5px;'></i><span id="coll_event_id">coll_event_id</span></td>
+                                    <td>int4</td>
+                                    <td>10</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                            <tr>
+                                                <td title="sample.coll_event_id references collecting_event.coll_event_id via collecting_event_sample_fk"><a href='collecting_event.html'>collecting_event</a><span class='relatedKey'>.coll_event_id</span></td>
+                                                <td class="constraint detail">collecting_event_sample_fk<span title='Restrict delete:&#10;Parent cannot be deleted if children exist'>R</span></td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td><p>FK. ID for the collecting event. Links to the collecting_event table.</p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="is_standard">is_standard</span></td>
+                                    <td>bool</td>
+                                    <td>1</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>false</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>Whether a sample is used as a standard in geochemical analyses.</p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="sample_notes">sample_notes</span></td>
+                                    <td>varchar</td>
+                                    <td>4000</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>Notes about the sample.</p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="timestamp_created">timestamp_created</span></td>
+                                    <td>timestamptz</td>
+                                    <td>35,6</td>
+                                    <td title=''></td>
+                                    <td title=''></td>
+                                    <td>now()</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="timestamp_modified">timestamp_modified</span></td>
+                                    <td>timestamptz</td>
+                                    <td>35,6</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>now()</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="uuid">uuid</span></td>
+                                    <td>uuid</td>
+                                    <td>2147483647</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>gen_random_uuid()</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>Randomly generated unique identifier.</p></td>
+                                </tr>
+                                <tr>
+                                    <td class='foreignKey' title='Foreign Key'><i class='icon ion-key iconkey' style='padding-left: 5px;'></i><span id="lith_id">lith_id</span></td>
+                                    <td>int4</td>
+                                    <td>10</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                            <tr>
+                                                <td title="sample.lith_id references dic_lithology.lith_id via dic_lithology_sample_fk"><a href='dic_lithology.html'>dic_lithology</a><span class='relatedKey'>.lith_id</span></td>
+                                                <td class="constraint detail">dic_lithology_sample_fk<span title='Restrict delete:&#10;Parent cannot be deleted if children exist'>R</span></td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td><p>FK. Reference to dic_lithology, a dictionary of lithology types e.g. shale, mudstone etc.</p></td>
+                                </tr>
+                                <tr>
+                                    <td class='foreignKey' title='Foreign Key'><i class='icon ion-key iconkey' style='padding-left: 5px;'></i><span id="color_id">color_id</span></td>
+                                    <td>int4</td>
+                                    <td>10</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                            <tr>
+                                                <td title="sample.color_id references dic_color.color_id via color_sample_fk"><a href='dic_color.html'>dic_color</a><span class='relatedKey'>.color_id</span></td>
+                                                <td class="constraint detail">color_sample_fk<span title='Restrict delete:&#10;Parent cannot be deleted if children exist'>R</span></td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td><p>FK. Reference to color table.</p></td>
+                                </tr>
+                                <tr>
+                                    <td class='foreignKey' title='Foreign Key'><i class='icon ion-key iconkey' style='padding-left: 5px;'></i><span id="lith_texture_id">lith_texture_id</span></td>
+                                    <td>int4</td>
+                                    <td>10</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                            <tr>
+                                                <td title="sample.lith_texture_id references dic_lith_texture.lith_texture_id via dic_lith_texture_sample_fk"><a href='dic_lith_texture.html'>dic_lith_texture</a><span class='relatedKey'>.lith_texture_id</span></td>
+                                                <td class="constraint detail">dic_lith_texture_sample_fk<span title='Restrict delete:&#10;Parent cannot be deleted if children exist'>R</span></td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td><p>FK. ID for the lithology texture. Links to dic_lith_texture.</p></td>
+                                </tr>
+                                <tr>
+                                    <td class='foreignKey' title='Foreign Key'><i class='icon ion-key iconkey' style='padding-left: 5px;'></i><span id="lith_composition_id">lith_composition_id</span></td>
+                                    <td>int4</td>
+                                    <td>10</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                            <tr>
+                                                <td title="sample.lith_composition_id references dic_lith_composition.lith_composition_id via dic_lith_composition_sample_fk"><a href='dic_lith_composition.html'>dic_lith_composition</a><span class='relatedKey'>.lith_composition_id</span></td>
+                                                <td class="constraint detail">dic_lith_composition_sample_fk<span title='Restrict delete:&#10;Parent cannot be deleted if children exist'>R</span></td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td><p>FK. ID for the lithology composition. Links to the dic_lith_composition table.</p></td>
+                                </tr>
+                                <tr>
+                                    <td class='indexedColumn' title='Indexed'><i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'></i><span id="is_bioturbated">is_bioturbated</span></td>
+                                    <td>bool</td>
+                                    <td>1</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>Whether the sediment is bioturbated.</p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="visible_py_ox">visible_py_ox</span></td>
+                                    <td>bool</td>
+                                    <td>1</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>Notes whether visible pyrite oxidation was noted in the field.</p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="ichnofabric_index">ichnofabric_index</span></td>
+                                    <td>varchar</td>
+                                    <td>50</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>Records the ichnofabric index - generally a scale from 1-6 (see Droser and Bottjer 1986).</p></td>
+                                </tr>
+                                <tr>
+                                    <td class='foreignKey' title='Foreign Key'><i class='icon ion-key iconkey' style='padding-left: 5px;'></i><span id="weath_grade">weath_grade</span></td>
+                                    <td>varchar</td>
+                                    <td>5</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                            <tr>
+                                                <td title="sample.weath_grade references dic_weathering.weath_grade via dic_weathering_sample_fk"><a href='dic_weathering.html'>dic_weathering</a><span class='relatedKey'>.weath_grade</span></td>
+                                                <td class="constraint detail">dic_weathering_sample_fk<span title='Restrict delete:&#10;Parent cannot be deleted if children exist'>R</span></td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td><p>FK. ID for weathering grade. Links to the dic_weathering table.</p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="lith_notes">lith_notes</span></td>
+                                    <td>varchar</td>
+                                    <td>4000</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>Notes about the lithology</p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="min_depth">min_depth</span></td>
+                                    <td>numeric</td>
+                                    <td>8,3</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>Minimum depth of sample collection, where a range is specified.</p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="max_depth">max_depth</span></td>
+                                    <td>numeric</td>
+                                    <td>8,3</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>Maximum depth of sample collection, where a range is specified.</p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="parent_igsn">parent_igsn</span></td>
+                                    <td>varchar</td>
+                                    <td>25</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>IGSN for parent sample - e.g. the IGSN for a core as a whole.</p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="verbatim_lith">verbatim_lith</span></td>
+                                    <td>varchar</td>
+                                    <td>4000</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>Verbatim lithology description, in particular where specified in a published table.</p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="composite_height_m">composite_height_m</span></td>
+                                    <td>numeric</td>
+                                    <td>9,2</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>Composite height/depth in meters, i.e. where multiple sections are put together as one larger section</p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="munsell_code">munsell_code</span></td>
+                                    <td>varchar</td>
+                                    <td>2147483647</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>Code for color from Munsell Rock Color Chart</p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="usgs_job_id">usgs_job_id</span></td>
+                                    <td>varchar</td>
+                                    <td>2147483647</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>From USGS database: Job ID; Laboratory batch identifier assigned by the Sample Control Officer of the analytical laboratory that received the samples as a batch.</p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="submitted_date">submitted_date</span></td>
+                                    <td>date</td>
+                                    <td>13</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>To accomodate data from USGS database: Date submitted; Date sample was submitted to Sample Control for initial database processing prior to sample prep and analysis.</p></td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-sitemap"></i>
+                            <h3 id="Indexes" class="box-title">Indexes</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <table id="indexes_table" class="table table-bordered table-striped dataTable" role="grid">
+                                <thead>
+                                <tr>
+                                    <th>Constraint Name</th>
+                                    <th>Type</th>
+                                    <th>Sort</th>
+                                    <th>Column(s)</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td class='primaryKey' title='Primary Key'><i class='icon ion-key iconkey'></i> sample_id</td>
+                                    <td>Primary key</td>
+                                    <td><span title='Ascending'>Asc</span></td>
+                                    <td>sample_id</td>
+                                </tr>
+                                <tr>
+                                    <td title='Indexed'>original_num_idx</td>
+                                    <td>Performance</td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td title='Indexed'>sample_coll_event_id_idx</td>
+                                    <td>Performance</td>
+                                    <td><span title='Ascending'>Asc</span></td>
+                                    <td>coll_event_id</td>
+                                </tr>
+                                <tr>
+                                    <td title='Indexed'>sample_color_id_idx</td>
+                                    <td>Performance</td>
+                                    <td><span title='Ascending'>Asc</span></td>
+                                    <td>color_id</td>
+                                </tr>
+                                <tr>
+                                    <td title='Indexed'>sample_geol_context_id_idx</td>
+                                    <td>Performance</td>
+                                    <td><span title='Ascending'>Asc</span></td>
+                                    <td>geol_context_id</td>
+                                </tr>
+                                <tr>
+                                    <td title='Indexed'>sample_is_bioturbated_idx</td>
+                                    <td>Performance</td>
+                                    <td><span title='Ascending'>Asc</span></td>
+                                    <td>is_bioturbated</td>
+                                </tr>
+                                <tr>
+                                    <td title='Indexed'>sample_lith_composition_id_idx</td>
+                                    <td>Performance</td>
+                                    <td><span title='Ascending'>Asc</span></td>
+                                    <td>lith_composition_id</td>
+                                </tr>
+                                <tr>
+                                    <td title='Indexed'>sample_lith_texture_id_idx</td>
+                                    <td>Performance</td>
+                                    <td><span title='Ascending'>Asc</span></td>
+                                    <td>lith_texture_id</td>
+                                </tr>
+                                <tr>
+                                    <td title='Indexed'>verbatim_lith_idx</td>
+                                    <td>Performance</td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div><!-- /.box-body -->
+                    </div>
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-code-fork"></i>
+                            <h3 id="Relationships" class="box-title">Relationships</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <div class="nav-tabs-custom"><!-- Tabs within a box -->
+                                <h5>Close relationships within degrees of separation</h5>
+                                <ul class="nav nav-tabs pull-left ui-sortable-handle">
+                                    <li class="active"><a href="#oneDegreeImg-chart" data-toggle="tab" aria-expanded="true">One</a></li>
+                                    <li class=""><a href="#twodegreesDegreeImg-chart" data-toggle="tab" aria-expanded="true">Two degrees</a></li>
+                                </ul>
+                                <div class="tab-content no-padding">
+                                    <div class="chart tab-pane active" id="oneDegreeImg-chart" style="position: relative; overflow-x:auto;">
+                                        <map id="oneDegreeRelationshipsDiagram" name="oneDegreeRelationshipsDiagram">
+<area shape="rect" id="node1" href="alternate_num.html" target="_top" title="alternate_num" alt="" coords="651,5,855,181">
+<area shape="rect" id="node2" href="sample.html" target="_top" title="sample" alt="" coords="272,709,599,1629">
+<area shape="rect" id="node8" href="collecting_event.html" target="_top" title="collecting_event" alt="" coords="15,841,219,988">
+<area shape="rect" id="node9" href="dic_color.html" target="_top" title="dic_color" alt="" coords="15,1140,219,1257">
+<area shape="rect" id="node10" href="geol_context.html" target="_top" title="geol_context" alt="" coords="15,396,219,631">
+<area shape="rect" id="node11" href="dic_lith_composition.html" target="_top" title="dic_lith_composition" alt="" coords="5,1409,228,1527">
+<area shape="rect" id="node12" href="dic_lithology.html" target="_top" title="dic_lithology" alt="" coords="15,1005,219,1123">
+<area shape="rect" id="node13" href="dic_lith_texture.html" target="_top" title="dic_lith_texture" alt="" coords="15,1275,219,1392">
+<area shape="rect" id="node14" href="storage.html" target="_top" title="storage" alt="" coords="15,648,219,824">
+<area shape="rect" id="node15" href="dic_weathering.html" target="_top" title="dic_weathering" alt="" coords="15,1544,219,1661">
+<area shape="rect" id="node3" href="batch_sample.html" target="_top" title="batch_sample" alt="" coords="651,199,855,345">
+<area shape="rect" id="node4" href="fossil_sample.html" target="_top" title="fossil_sample" alt="" coords="651,363,855,568">
+<area shape="rect" id="node5" href="interpreted_age.html" target="_top" title="interpreted_age" alt="" coords="643,585,863,761">
+<area shape="rect" id="node6" href="project_sample.html" target="_top" title="project_sample" alt="" coords="651,779,855,925">
+<area shape="rect" id="node7" href="proxy_published.html" target="_top" title="proxy_published" alt="" coords="651,943,855,1148">
+<area shape="rect" id="node16" href="sample_provided_by.html" target="_top" title="sample_provided_by" alt="" coords="649,1165,857,1312">
+<area shape="rect" id="node17" href="sed_structure_sample.html" target="_top" title="sed_structure_sample" alt="" coords="643,1329,862,1476">
+</map>
+                                        <a name='diagram'><img id="oneDegreeImg" src="../diagrams/tables/sample.1degree.png" usemap="#oneDegreeRelationshipsDiagram" class="diagram" border="0" align="left"></a>
+                                    </div>
+                                    <div class="chart tab-pane " id="twodegreesDegreeImg-chart" style="position: relative; overflow-x:auto;">
+                                        <map id="twoDegreesRelationshipsDiagram" name="twoDegreesRelationshipsDiagram">
+<area shape="rect" id="node1" href="alternate_num.html" target="_top" title="alternate_num" alt="" coords="832,395,1036,571">
+<area shape="rect" id="node2" href="reference_work.html" target="_top" title="reference_work" alt="" coords="541,321,693,409">
+<area shape="rect" id="node3" href="sample.html" target="_top" title="sample" alt="" coords="453,591,780,1511">
+<area shape="rect" id="node8" href="collecting_event.html" target="_top" title="collecting_event" alt="" coords="196,715,400,861">
+<area shape="rect" id="node15" href="geol_context.html" target="_top" title="geol_context" alt="" coords="196,125,400,360">
+<area shape="rect" id="node26" href="dic_color.html" target="_top" title="dic_color" alt="" coords="196,1013,400,1131">
+<area shape="rect" id="node27" href="dic_lith_composition.html" target="_top" title="dic_lith_composition" alt="" coords="187,1283,409,1400">
+<area shape="rect" id="node28" href="dic_lithology.html" target="_top" title="dic_lithology" alt="" coords="196,879,400,996">
+<area shape="rect" id="node29" href="dic_lith_texture.html" target="_top" title="dic_lith_texture" alt="" coords="196,1148,400,1265">
+<area shape="rect" id="node30" href="storage.html" target="_top" title="storage" alt="" coords="196,521,400,697">
+<area shape="rect" id="node31" href="dic_weathering.html" target="_top" title="dic_weathering" alt="" coords="196,1417,400,1535">
+<area shape="rect" id="node4" href="analyte_determination.html" target="_top" title="analyte_determination" alt="" coords="1107,92,1295,180">
+<area shape="rect" id="node5" href="batch_sample.html" target="_top" title="batch_sample" alt="" coords="832,89,1036,236">
+<area shape="rect" id="node6" href="batch.html" target="_top" title="batch" alt="" coords="555,97,678,185">
+<area shape="rect" id="node7" href="institution.html" target="_top" title="institution" alt="" coords="12,427,136,515">
+<area shape="rect" id="node9" href="site.html" target="_top" title="site" alt="" coords="5,747,143,835">
+<area shape="rect" id="node10" href="collector.html" target="_top" title="collector" alt="" coords="558,485,675,573">
+<area shape="rect" id="node11" href="person.html" target="_top" title="person" alt="" coords="13,532,135,620">
+<area shape="rect" id="node12" href="dic_proxy.html" target="_top" title="dic_proxy" alt="" coords="873,253,995,341">
+<area shape="rect" id="node13" href="fossil_sample.html" target="_top" title="fossil_sample" alt="" coords="832,1017,1036,1223">
+<area shape="rect" id="node14" href="fossil.html" target="_top" title="fossil" alt="" coords="560,1528,673,1616">
+<area shape="rect" id="node16" href="geol_age.html" target="_top" title="geol_age" alt="" coords="13,111,135,199">
+<area shape="rect" id="node17" href="biostrat.html" target="_top" title="biostrat" alt="" coords="13,321,135,409">
+<area shape="rect" id="node18" href="environment.html" target="_top" title="environment" alt="" coords="5,5,143,93">
+<area shape="rect" id="node19" href="lithostrat.html" target="_top" title="lithostrat" alt="" coords="8,216,140,304">
+<area shape="rect" id="node20" href="geol_context_provided_by.html" target="_top" title="geol_context_provided_by" alt="" coords="511,207,722,295">
+<area shape="rect" id="node21" href="interpreted_age.html" target="_top" title="interpreted_age" alt="" coords="824,588,1044,764">
+<area shape="rect" id="node22" href="interpreted_age_provided_by.html" target="_top" title="interpreted_age_provided_by" alt="" coords="1088,1199,1313,1287">
+<area shape="rect" id="node23" href="project_sample.html" target="_top" title="project_sample" alt="" coords="832,1312,1036,1459">
+<area shape="rect" id="node24" href="project.html" target="_top" title="project" alt="" coords="555,1633,678,1721">
+<area shape="rect" id="node25" href="proxy_published.html" target="_top" title="proxy_published" alt="" coords="1099,231,1303,436">
+<area shape="rect" id="node32" href="sample_provided_by.html" target="_top" title="sample_provided_by" alt="" coords="830,781,1038,928">
+<area shape="rect" id="node33" href="sed_structure_sample.html" target="_top" title="sed_structure_sample" alt="" coords="825,1620,1043,1767">
+<area shape="rect" id="node34" href="dic_sed_structure.html" target="_top" title="dic_sed_structure" alt="" coords="533,1739,700,1827">
+</map>
+                                        <a name='diagram'><img id="twodegreesDegreeImg" src="../diagrams/tables/sample.2degrees.png" usemap="#twoDegreesRelationshipsDiagram" class="diagram" border="0" align="left"></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div><!-- /.box-body -->
+                    </div>
+                </section>
+                <script>
+                    var config = {
+                        pagination: true
+                    }
+                </script>
+            </div>
+            <!-- /.content-wrapper -->
+            <footer class="main-footer">
+                <div>
+                    <div class="pull-right hidden-xs">
+                        <a href="https://github.com/schemaspy/schemaspy" title="GitHub for SchemaSpy"><i class="fa fa-github-square fa-2x"></i></a>
+                        <a href="http://stackoverflow.com/questions/tagged/schemaspy" title="StackOverflow for SchemaSpy"><i class="fa fa-stack-overflow fa-2x"></i></a>
+                    </div>
+                    <strong>Generated by <a href="http://schemaspy.org/" class="logo-text"><i class="fa fa-database"></i> SchemaSpy 6.1.0</a></strong>
+                </div>
+                <!-- /.container -->
+            </footer>
+        </div>
+        <!-- ./wrapper -->
+
+        <!-- jQuery 2.2.3 -->
+        <script src="../bower/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+        <script src="../bower/admin-lte/plugins/jQueryUI/jquery-ui.min.js"></script>
+        <!-- Bootstrap 3.3.5 -->
+        <script src="../bower/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+        <!-- DataTables -->
+        <script src="../bower/datatables.net/jquery.dataTables.min.js"></script>
+        <script src="../bower/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/dataTables.buttons.min.js"></script>
+        <script src="../bower/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.html5.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.print.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.colVis.min.js"></script>
+        <!-- SheetJS -->
+        <script src="../bower/js-xlsx/xlsx.full.min.js"></script>
+        <!-- pdfmake -->
+        <script src="../bower/pdfmake/pdfmake.min.js"></script>
+        <script src="../bower/pdfmake/vfs_fonts.js"></script>
+        <!-- SlimScroll -->
+        <script src="../bower/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+        <!-- FastClick -->
+        <script src="../bower/admin-lte/plugins/fastclick/fastclick.js"></script>
+        <!-- Salvattore -->
+        <script src="../bower/salvattore/salvattore.min.js"></script>
+        <!-- AnchorJS -->
+        <script src="../bower/anchor-js/anchor.min.js"></script>
+        <!-- CodeMirror -->
+        <script src="../bower/codemirror/codemirror.js"></script>
+        <script src="../bower/codemirror/sql.js"></script>
+        <!-- AdminLTE App -->
+        <script src="../bower/admin-lte/dist/js/app.min.js"></script>
+        <script src="table.js"></script>
+        <script src="../schemaSpy.js"></script>
+    </body>
+</html>
