@@ -5,6 +5,8 @@ Navigate through the database schema here: https://ufarrell.github.io/sgp_phase1
 
 To find out more about the project: https://sgp.stanford.edu/
 
+To find out more about Phase 1: https://github.com/ufarrell/sgp_phase1/wiki
+
 SQL for core tables is https://github.com/ufarrell/sgp_phase1/blob/master/SGP_phase1_v2.1.sql
 
 
