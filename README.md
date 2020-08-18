@@ -1,4 +1,10 @@
 # sgp_phase1
-Description of Phase 1 of SGP database
+SGP Phase 1 database documentation
 
-Schema: https://ufarrell.github.io/sgp_phase1/
+Navigate through the database schema here: https://ufarrell.github.io/sgp_phase1/
+
+To find out more about the project: https://sgp.stanford.edu/
+
+SQL for core tables is https://github.com/ufarrell/sgp_phase1/blob/master/SGP_phase1_v2.1.sql
+
+
